@@ -21,10 +21,10 @@ jobs:
       - name: Install deps
         run: npm ci
 
-      - name: Prepare Capacitor (init only)
+      - name: Prepare Capacitor (init + deps)
         run: |
-          npm i -D @capacitor/cli
-          npm i @capacitor/core
+          npm i -D @capacitor/cli@latest @capacitor/android@latest
+          npm i @capacitor/core@latest
           if [ ! -f capacitor.config.ts ] && [ ! -f capacitor.config.json ]; then
             npx cap init "Speak Build APK" "com.frucht718.speakbuildapk" --web-dir=dist
           fi
@@ -35,7 +35,6 @@ jobs:
       - name: Add Android (no sync yet)
         run: |
           npx cap add android || true
-          # Gradle RAM etwas erhöhen
           echo "org.gradle.jvmargs=-Xmx2g -XX:+UseParallelGC" | tee -a android/gradle.properties >/dev/null
 
       - name: Put Icon with ImageMagick (no sharp)
@@ -45,7 +44,6 @@ jobs:
           if [ -f assets/icon.png ]; then
             RES="android/app/src/main/res"
             declare -A SZ=( [mdpi]=48 [hdpi]=72 [xhdpi]=96 [xxhdpi]=144 [xxxhdpi]=192 )
-            # Falls IM7: "magick", sonst "convert"
             IM_BIN="convert"; command -v magick >/dev/null 2>&1 && IM_BIN="magick convert"
             for D in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
               mkdir -p "$RES/mipmap-$D"
