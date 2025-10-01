@@ -1,0 +1,68 @@
+name: Android APK (Capacitor)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Prepare Capacitor
+        run: |
+          npm i -D @capacitor/cli @capacitor/assets
+          npm i @capacitor/core
+          if [ ! -f capacitor.config.ts ] && [ ! -f capacitor.config.json ]; then
+            npx cap init "Speak Build APK" "com.frucht718.speakbuildapk" --web-dir=dist --npm-client=npm
+          fi
+
+      - name: Build web (Vite)
+        run: npm run build
+
+      - name: Add Android + Generate Icons
+        run: |
+          npx cap add android || true
+          if [ -f assets/icon.png ]; then
+            mkdir -p resources
+            cp -f assets/icon.png resources/icon.png
+            npx @capacitor/assets generate --android --icon resources/icon.png
+          fi
+          npx cap sync android
+          grep -q "org.gradle.jvmargs" android/gradle.properties || echo "org.gradle.jvmargs=-Xmx2g -XX:+UseParallelGC" >> android/gradle.properties
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android packages
+        run: |
+          sdkmanager --install "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+          yes | sdkmanager --licenses
+
+      - name: Build Release APK
+        working-directory: android
+        run: ./gradlew :app:assembleRelease
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: apk
+          path: android/app/build/outputs/apk/release/*.apk
