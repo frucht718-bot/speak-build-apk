@@ -21,7 +21,7 @@ jobs:
       - name: Install deps
         run: npm ci
 
-      - name: Prepare Capacitor (ohne @capacitor/assets)
+      - name: Prepare Capacitor (init only)
         run: |
           npm i -D @capacitor/cli
           npm i @capacitor/core
@@ -32,23 +32,29 @@ jobs:
       - name: Build web (Vite)
         run: npm run build
 
-      - name: Add Android + Put Icon (ImageMagick, no sharp)
+      - name: Add Android (no sync yet)
+        run: |
+          npx cap add android || true
+          # Gradle RAM etwas erhöhen
+          echo "org.gradle.jvmargs=-Xmx2g -XX:+UseParallelGC" | tee -a android/gradle.properties >/dev/null
+
+      - name: Put Icon with ImageMagick (no sharp)
         run: |
           sudo apt-get update
           sudo apt-get install -y imagemagick
-          npx cap add android || true
-          npx cap sync android
           if [ -f assets/icon.png ]; then
             RES="android/app/src/main/res"
             declare -A SZ=( [mdpi]=48 [hdpi]=72 [xhdpi]=96 [xxhdpi]=144 [xxxhdpi]=192 )
+            # Falls IM7: "magick", sonst "convert"
+            IM_BIN="convert"; command -v magick >/dev/null 2>&1 && IM_BIN="magick convert"
             for D in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
               mkdir -p "$RES/mipmap-$D"
-              convert assets/icon.png -resize "${SZ[$D]}x${SZ[$D]}" "$RES/mipmap-$D/ic_launcher.png"
-              convert assets/icon.png -resize "${SZ[$D]}x${SZ[$D]}" "$RES/mipmap-$D/ic_launcher_round.png"
+              $IM_BIN assets/icon.png -resize "${SZ[$D]}x${SZ[$D]}" "$RES/mipmap-$D/ic_launcher.png"
+              $IM_BIN assets/icon.png -resize "${SZ[$D]}x${SZ[$D]}" "$RES/mipmap-$D/ic_launcher_round.png"
             done
+          else
+            echo "WARN: assets/icon.png fehlt – Standard-Launcher wird verwendet."
           fi
-          # etwas RAM für Gradle
-          echo "org.gradle.jvmargs=-Xmx2g -XX:+UseParallelGC" | tee -a android/gradle.properties >/dev/null
 
       - name: Setup Java 17
         uses: actions/setup-java@v4
@@ -63,6 +69,9 @@ jobs:
         run: |
           sdkmanager --install "platform-tools" "platforms;android-34" "build-tools;34.0.0"
           yes | sdkmanager --licenses
+
+      - name: Sync Android (nachdem JDK/SDK da sind)
+        run: npx cap sync android
 
       - name: Build Release APK
         working-directory: android
