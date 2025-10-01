@@ -18,10 +18,24 @@ jobs:
           node-version: 20
           cache: npm
 
+      - name: Show env
+        run: |
+          node -v
+          npm -v
+          uname -a
+
+      # Wichtig: System-Libs für sharp, damit @capacitor/assets sicher läuft
+      - name: Install system libraries for sharp (libvips)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libvips libvips-dev build-essential python3 g++
+
       - name: Install deps
         run: npm ci
 
       - name: Prepare Capacitor
+        env:
+          npm_config_build_from_source: "true"
         run: |
           npm i -D @capacitor/cli @capacitor/assets
           npm i @capacitor/core
