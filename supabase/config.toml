@@ -1,1 +1,16 @@
 project_id = "ydgxcuxdbigfzbbjhwry"
+
+[functions.voice-to-text]
+verify_jwt = false
+
+[functions.generate-app-code]
+verify_jwt = false
+
+[functions.generate-app-icon]
+verify_jwt = false
+
+[functions.modify-app-code]
+verify_jwt = false
+
+[functions.build-apk]
+verify_jwt = false
