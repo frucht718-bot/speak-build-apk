@@ -4,9 +4,11 @@ import { AIProcessingView } from "@/components/AIProcessingView";
 import { CodePreview } from "@/components/CodePreview";
 import { ChatInterface } from "@/components/ChatInterface";
 import { RealtimeVoiceChat } from "@/components/RealtimeVoiceChat";
+import { ParticleBackground } from "@/components/ParticleBackground";
+import { FeatureCard } from "@/components/FeatureCard";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Sparkles, Loader2, Code, Image, CheckCircle2, Mic, Volume2 } from "lucide-react";
+import { Sparkles, Loader2, Code, Image, CheckCircle2, Mic, Volume2, Zap, Wand2, Rocket } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 type AppStage = "recording" | "processing" | "preview" | "chat";
@@ -206,41 +208,80 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background relative overflow-hidden">
+      {/* Particle Background */}
+      <ParticleBackground />
+      
       {/* Animated background gradients */}
       <div className="fixed inset-0 -z-10">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/30 rounded-full blur-[120px] animate-float" />
         <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-cyber-cyan/20 rounded-full blur-[120px] animate-float" style={{ animationDelay: "1s" }} />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-primary opacity-10 rounded-full blur-[150px] animate-glow-rotate" />
       </div>
 
       <div className="container mx-auto px-4 py-12">
-        {/* Header */}
-        <div className="text-center mb-12 animate-slide-up">
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <div className="p-3 bg-gradient-primary rounded-2xl shadow-glow">
-              <Sparkles className="h-8 w-8 text-primary-foreground" />
+        {/* Header with enhanced animations */}
+        <div className="text-center mb-16 space-y-6">
+          {/* Main Title */}
+          <div className="animate-slide-up">
+            <div className="flex items-center justify-center gap-4 mb-6">
+              <div className="relative group">
+                <div className="absolute inset-0 bg-gradient-primary opacity-50 blur-2xl group-hover:blur-3xl transition-all duration-500 animate-pulse-glow" />
+                <div className="relative p-4 bg-gradient-primary rounded-3xl shadow-glow">
+                  <Sparkles className="h-10 w-10 text-primary-foreground animate-float" />
+                </div>
+              </div>
+              
+              <h1 className="text-6xl md:text-7xl font-bold bg-gradient-to-r from-primary via-cyber-cyan to-primary bg-clip-text text-transparent animate-gradient">
+                KI App Builder
+              </h1>
             </div>
-            <h1 className="text-5xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-              KI App Builder
-            </h1>
+            
+            <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
+              Erstellen Sie mobile Apps mit der Kraft der KI – 
+              <span className="text-primary font-semibold"> in Sekunden</span>
+            </p>
           </div>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Erstellen Sie mobile Apps mit der Kraft der KI
-          </p>
+
+          {/* Feature Pills */}
+          <div className="flex flex-wrap items-center justify-center gap-3 animate-slide-up" style={{ animationDelay: "200ms" }}>
+            {[
+              { icon: Zap, text: "Blitzschnell" },
+              { icon: Wand2, text: "KI-gesteuert" },
+              { icon: Rocket, text: "Sofort einsatzbereit" }
+            ].map((feature, i) => (
+              <div
+                key={i}
+                className="flex items-center gap-2 px-4 py-2 rounded-full bg-muted/50 backdrop-blur-sm border border-border/50 hover:border-primary/50 hover:bg-primary/10 transition-all duration-300 group cursor-default"
+              >
+                <feature.icon className="w-4 h-4 text-primary group-hover:scale-110 transition-transform" />
+                <span className="text-sm font-medium">{feature.text}</span>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Main Content */}
-        <div className="max-w-6xl mx-auto space-y-8">
+        <div className="max-w-6xl mx-auto space-y-12">
           <Tabs defaultValue="classic" className="w-full">
-            <TabsList className="grid w-full max-w-md mx-auto grid-cols-2 mb-8">
-              <TabsTrigger value="classic" className="gap-2">
-                <Mic className="w-4 h-4" />
-                Klassischer Modus
-              </TabsTrigger>
-              <TabsTrigger value="voice" className="gap-2">
-                <Volume2 className="w-4 h-4" />
-                Voice-Chat (Echtzeit)
-              </TabsTrigger>
-            </TabsList>
+            <div className="relative mb-12">
+              <div className="absolute inset-0 bg-gradient-primary opacity-10 blur-3xl rounded-full" />
+              <TabsList className="relative grid w-full max-w-2xl mx-auto grid-cols-2 p-2 bg-muted/30 backdrop-blur-glass border border-border/50 shadow-glass">
+                <TabsTrigger 
+                  value="classic" 
+                  className="gap-2 data-[state=active]:bg-gradient-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-glow transition-all duration-300"
+                >
+                  <Mic className="w-4 h-4" />
+                  Klassischer Modus
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="voice" 
+                  className="gap-2 data-[state=active]:bg-gradient-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-glow transition-all duration-300"
+                >
+                  <Volume2 className="w-4 h-4" />
+                  Voice-Chat (Echtzeit)
+                </TabsTrigger>
+              </TabsList>
+            </div>
 
             <TabsContent value="classic">
               {stage === "recording" && (

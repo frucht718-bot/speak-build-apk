@@ -128,6 +128,8 @@ export default {
         "slide-up": "slide-up 0.5s ease-out",
         "float": "float 3s ease-in-out infinite",
         "glow-rotate": "glow-rotate 3s linear infinite",
+        "gradient": "gradient 8s ease infinite",
+        "shimmer": "shimmer 3s ease-in-out infinite",
       },
     },
   },

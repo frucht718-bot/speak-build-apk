@@ -97,9 +97,25 @@ export const VoiceRecorder = ({ onRecordingComplete, isProcessing }: VoiceRecord
   };
 
   return (
-    <div className="flex flex-col items-center gap-6">
+    <div className="flex flex-col items-center gap-8 py-12">
+      {/* Audio level visualizer */}
+      {isRecording && (
+        <div className="flex items-center gap-2 mb-4">
+          {[...Array(5)].map((_, i) => (
+            <div
+              key={i}
+              className="w-2 bg-primary rounded-full transition-all duration-150"
+              style={{
+                height: `${20 + audioLevel * 60 * (1 - Math.abs(i - 2) * 0.2)}px`,
+                opacity: 0.3 + audioLevel * 0.7,
+              }}
+            />
+          ))}
+        </div>
+      )}
+
       <div className="relative">
-        {/* Pulsing rings */}
+        {/* Pulsing rings with improved effects */}
         {isRecording && (
           <>
             <div 
@@ -116,7 +132,19 @@ export const VoiceRecorder = ({ onRecordingComplete, isProcessing }: VoiceRecord
                 transition: "transform 0.1s ease-out"
               }}
             />
+            <div 
+              className="absolute inset-0 rounded-full bg-gradient-primary opacity-10 blur-2xl"
+              style={{ 
+                transform: `scale(${1.5 + audioLevel * 0.4})`,
+                transition: "transform 0.1s ease-out"
+              }}
+            />
           </>
+        )}
+        
+        {/* Idle glow effect */}
+        {!isRecording && !isProcessing && (
+          <div className="absolute inset-0 bg-gradient-primary opacity-30 blur-3xl animate-pulse-glow" />
         )}
         
         <Button
@@ -124,29 +152,35 @@ export const VoiceRecorder = ({ onRecordingComplete, isProcessing }: VoiceRecord
           onClick={isRecording ? stopRecording : startRecording}
           disabled={isProcessing}
           className={cn(
-            "relative h-24 w-24 rounded-full transition-all duration-300",
+            "relative h-32 w-32 rounded-full transition-all duration-500 group",
             isRecording
-              ? "bg-destructive hover:bg-destructive/90 shadow-glow"
-              : "bg-gradient-primary hover:opacity-90 shadow-glow animate-pulse-glow"
+              ? "bg-destructive hover:bg-destructive/90 shadow-glow scale-110"
+              : "bg-gradient-primary hover:opacity-90 shadow-glow hover:scale-110",
+            isProcessing && "opacity-50 cursor-not-allowed"
           )}
         >
           {isRecording ? (
-            <Square className="h-8 w-8" />
+            <Square className="h-12 w-12 group-hover:scale-90 transition-transform" />
           ) : (
-            <Mic className="h-8 w-8" />
+            <Mic className="h-12 w-12 group-hover:scale-110 transition-transform" />
           )}
         </Button>
       </div>
 
-      <div className="text-center">
-        <p className="text-lg font-medium text-foreground">
-          {isRecording ? "Aufnahme läuft..." : "Drücken um aufzunehmen"}
+      <div className="text-center space-y-2 max-w-md">
+        <p className="text-2xl font-bold text-foreground">
+          {isRecording ? "Aufnahme läuft..." : "Bereit zum Aufnehmen"}
         </p>
-        <p className="text-sm text-muted-foreground mt-1">
+        <p className="text-base text-muted-foreground">
           {isRecording 
-            ? "Beschreiben Sie Ihre App mit Ihrer Stimme" 
-            : "Sagen Sie uns, welche App Sie erstellen möchten"}
+            ? "Beschreiben Sie Ihre App klar und deutlich" 
+            : "Klicken Sie auf den Button und beschreiben Sie Ihre App-Idee"}
         </p>
+        {isRecording && (
+          <p className="text-sm text-primary animate-pulse">
+            🎤 Mikrofon ist aktiv
+          </p>
+        )}
       </div>
     </div>
   );

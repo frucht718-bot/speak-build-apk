@@ -1,4 +1,35 @@
-# Welcome to your Lovable project
+# 🚀 KI App Builder - Welcome to your Lovable project
+
+Ein moderner, KI-gestützter App-Builder, der mobile Android-Apps durch Spracheingabe erstellt.
+
+## ✨ Features
+
+### 🎤 Voice-to-Code
+- Beschreiben Sie Ihre App-Idee per Spracheingabe
+- Automatische Transkription mit OpenAI Whisper
+- Echtzeit Audio-Visualisierung mit futuristischen Effekten
+
+### 🤖 Multi-AI-Provider
+- **Gemini 2.5 Flash** - Googles neueste KI (Standard, kostenlos)
+- **Groq** - Ultraschnelle Inferenz
+- **OpenAI GPT-4o** - Leistungsstarke Alternative
+
+### 🎨 Moderne UI/UX
+- Futuristische Glassmorphism-Effekte
+- Flüssige Animationen und Übergänge
+- Particle-Background-Effekte
+- Vollständig responsive
+
+### 💬 Echtzeit Voice-Chat
+- Direktes Gespräch mit der KI via WebRTC
+- Basiert auf OpenAI Realtime API
+- Wie ChatGPT Voice Mode
+
+### 🎯 Code-Generierung
+- React Native Code mit Expo
+- TypeScript-konform
+- Best Practices
+- Deutsche Kommentare
 
 ## Project info
 
@@ -54,11 +85,32 @@ npm run dev
 
 This project is built with:
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+### Frontend
+- **Vite** - Lightning-fast build tool
+- **TypeScript** - Type safety
+- **React 18** - Modern UI framework
+- **Tailwind CSS** - Utility-first CSS
+- **Shadcn/ui** - Beautiful components
+- **Lucide Icons** - Modern icon library
+
+### Backend (Lovable Cloud)
+- **Supabase Edge Functions** - Serverless logic
+- **PostgreSQL** - Robust database
+- **Real-time subscriptions** - Live updates
+
+### KI Integration
+- **Lovable AI Gateway** - Gemini & OpenAI access
+- **OpenAI Whisper** - Speech-to-text
+- **OpenAI Realtime API** - Voice chat
+- **Gemini 2.5 Flash** - Code & image generation
+
+## 🎨 Design Highlights
+
+- **Particle Background** - Animated particle system
+- **Glassmorphism** - Modern glass effects
+- **Smooth Animations** - 60fps fluid transitions
+- **Dark Mode** - Eye-friendly design
+- **Gradient Effects** - Dynamic color animations
 
 ## How can I deploy this project?
 
