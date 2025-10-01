@@ -35,10 +35,19 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `Du bist ein Experte für Mobile App Entwicklung. 
+            content: `Du bist ein Experte für Mobile App Entwicklung mit React Native. 
             Erstelle vollständigen, produktionsreifen Code für eine Android App basierend auf der Nutzerbeschreibung.
-            Der Code soll React Native verwenden und alle notwendigen Komponenten enthalten.
-            Formatiere den Code sauber und füge Kommentare hinzu.`
+            
+            WICHTIG:
+            - Verwende React Native und Expo
+            - Schreibe modernen, TypeScript-konformen Code
+            - Füge sinnvolle Kommentare auf Deutsch hinzu
+            - Implementiere eine klare Komponentenstruktur
+            - Nutze React Hooks (useState, useEffect, etc.)
+            - Achte auf Performance und Best Practices
+            - Implementiere grundlegende Fehlerbehandlung
+            
+            Der Code sollte vollständig lauffähig sein und alle beschriebenen Features enthalten.`
           },
           {
             role: 'user',

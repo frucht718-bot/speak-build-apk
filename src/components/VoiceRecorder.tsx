@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Mic, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 interface VoiceRecorderProps {
   onRecordingComplete: (audioBlob: Blob) => void;
@@ -15,6 +16,7 @@ export const VoiceRecorder = ({ onRecordingComplete, isProcessing }: VoiceRecord
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const chunksRef = useRef<Blob[]>([]);
+  const { toast } = useToast();
 
   useEffect(() => {
     return () => {
@@ -28,7 +30,7 @@ export const VoiceRecorder = ({ onRecordingComplete, isProcessing }: VoiceRecord
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       
-      // Set up audio visualization
+      // Audio-Visualisierung einrichten
       audioContextRef.current = new AudioContext();
       analyserRef.current = audioContextRef.current.createAnalyser();
       const source = audioContextRef.current.createMediaStreamSource(stream);
@@ -65,8 +67,18 @@ export const VoiceRecorder = ({ onRecordingComplete, isProcessing }: VoiceRecord
       mediaRecorderRef.current.start();
       setIsRecording(true);
       updateAudioLevel();
+      
+      toast({
+        title: "Aufnahme gestartet",
+        description: "Sprechen Sie klar und deutlich",
+      });
     } catch (error) {
-      console.error("Error accessing microphone:", error);
+      console.error("Fehler beim Zugriff auf Mikrofon:", error);
+      toast({
+        title: "Fehler",
+        description: "Konnte nicht auf Mikrofon zugreifen",
+        variant: "destructive",
+      });
     }
   };
 
@@ -77,6 +89,10 @@ export const VoiceRecorder = ({ onRecordingComplete, isProcessing }: VoiceRecord
       if (audioContextRef.current) {
         audioContextRef.current.close();
       }
+      toast({
+        title: "Aufnahme beendet",
+        description: "Ihre Spracheingabe wird verarbeitet...",
+      });
     }
   };
 
@@ -124,12 +140,12 @@ export const VoiceRecorder = ({ onRecordingComplete, isProcessing }: VoiceRecord
 
       <div className="text-center">
         <p className="text-lg font-medium text-foreground">
-          {isRecording ? "Aufnahme läuft..." : "Drücke um aufzunehmen"}
+          {isRecording ? "Aufnahme läuft..." : "Drücken um aufzunehmen"}
         </p>
         <p className="text-sm text-muted-foreground mt-1">
           {isRecording 
-            ? "Beschreibe deine App mit deiner Stimme" 
-            : "Sage mir, welche App du erstellen möchtest"}
+            ? "Beschreiben Sie Ihre App mit Ihrer Stimme" 
+            : "Sagen Sie uns, welche App Sie erstellen möchten"}
         </p>
       </div>
     </div>

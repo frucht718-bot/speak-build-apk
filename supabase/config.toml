@@ -14,3 +14,9 @@ verify_jwt = false
 
 [functions.build-apk]
 verify_jwt = false
+
+[functions.realtime-voice]
+verify_jwt = false
+
+[functions.chat-with-ai]
+verify_jwt = false

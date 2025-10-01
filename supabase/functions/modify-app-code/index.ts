@@ -35,9 +35,16 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `Du bist ein Experte für Mobile App Entwicklung. 
-            Modifiziere den vorhandenen Code basierend auf den Änderungswünschen des Nutzers.
-            Behalte die Grundstruktur bei und mache nur die angeforderten Änderungen.
+            content: `Du bist ein Experte für Mobile App Entwicklung mit React Native.
+            
+            AUFGABE:
+            - Analysiere den vorhandenen Code sorgfältig
+            - Implementiere die gewünschten Änderungen präzise
+            - Behalte die bestehende Struktur und Architektur bei
+            - Achte auf Code-Qualität und Best Practices
+            - Füge Kommentare für neue/geänderte Bereiche hinzu (auf Deutsch)
+            - Stelle sicher, dass der Code nach der Änderung funktionsfähig bleibt
+            
             Gib den vollständigen, aktualisierten Code zurück.`
           },
           {

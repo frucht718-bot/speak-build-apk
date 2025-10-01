@@ -24,7 +24,7 @@ export const AIProcessingView = ({ currentStep, steps }: AIProcessingViewProps) 
           <div className="flex items-center gap-3 mb-8">
             <Sparkles className="h-6 w-6 text-primary animate-pulse" />
             <h2 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-              KI erstellt deine App
+              KI erstellt Ihre App
             </h2>
           </div>
 

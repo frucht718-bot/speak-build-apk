@@ -14,19 +14,25 @@ serve(async (req) => {
     const { prompt } = await req.json()
     
     if (!prompt) {
-      throw new Error('No prompt provided')
+      throw new Error('Keine Beschreibung angegeben')
     }
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY')
     if (!LOVABLE_API_KEY) {
-      throw new Error('LOVABLE_API_KEY not configured')
+      throw new Error('LOVABLE_API_KEY nicht konfiguriert')
     }
 
-    console.log('Generating app icon for prompt:', prompt)
+    console.log('Generiere App-Icon für:', prompt)
 
-    const iconPrompt = `Create a modern, professional app icon for: ${prompt}. 
-    The icon should be simple, recognizable, and suitable for a mobile app. 
-    Use vibrant colors and a clean design. Square format, suitable for Android adaptive icon.`
+    const iconPrompt = `Erstelle ein modernes, professionelles App-Icon für: ${prompt}. 
+    Das Icon sollte:
+    - Einfach und einprägsam sein
+    - Für eine mobile Android-App geeignet sein
+    - Lebendige Farben verwenden
+    - Modernen Design-Prinzipien folgen
+    - Gut auf kleinen Bildschirmen erkennbar sein
+    - Ein klares, fokussiertes Design haben (kein Text im Icon)
+    - Quadratisches Format, geeignet für Android adaptive Icons`
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -48,18 +54,18 @@ serve(async (req) => {
 
     if (!response.ok) {
       const errorText = await response.text()
-      console.error('Lovable AI error:', response.status, errorText)
-      throw new Error(`Lovable AI error: ${response.status}`)
+      console.error('Lovable AI Fehler:', response.status, errorText)
+      throw new Error(`Lovable AI Fehler: ${response.status}`)
     }
 
     const data = await response.json()
     const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url
 
     if (!imageUrl) {
-      throw new Error('No image generated')
+      throw new Error('Kein Icon generiert')
     }
 
-    console.log('Icon generated successfully')
+    console.log('Icon erfolgreich generiert')
 
     return new Response(
       JSON.stringify({ icon: imageUrl }),
@@ -67,8 +73,8 @@ serve(async (req) => {
     )
 
   } catch (error) {
-    console.error('Error in generate-app-icon:', error)
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    console.error('Fehler in generate-app-icon:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Unbekannter Fehler'
     return new Response(
       JSON.stringify({ error: errorMessage }),
       {

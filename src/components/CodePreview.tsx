@@ -44,7 +44,7 @@ export const CodePreview = ({
                     <div className="flex flex-col items-center gap-4 p-6 bg-muted/20 rounded-2xl">
                       <img 
                         src={appIcon} 
-                        alt="App Icon" 
+                        alt="App-Icon" 
                         className="w-24 h-24 rounded-3xl shadow-glow animate-float"
                       />
                       <p className="text-sm text-muted-foreground">Generiertes App-Icon</p>

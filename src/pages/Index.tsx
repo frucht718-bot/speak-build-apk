@@ -3,9 +3,11 @@ import { VoiceRecorder } from "@/components/VoiceRecorder";
 import { AIProcessingView } from "@/components/AIProcessingView";
 import { CodePreview } from "@/components/CodePreview";
 import { ChatInterface } from "@/components/ChatInterface";
+import { RealtimeVoiceChat } from "@/components/RealtimeVoiceChat";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Sparkles, Loader2, Code, Image, CheckCircle2 } from "lucide-react";
+import { Sparkles, Loader2, Code, Image, CheckCircle2, Mic, Volume2 } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 type AppStage = "recording" | "processing" | "preview" | "chat";
 
@@ -105,11 +107,11 @@ const Index = () => {
 
         toast({
           title: "App erfolgreich erstellt! 🎉",
-          description: "Deine App ist bereit zur Vorschau",
+          description: "Ihre App ist bereit zur Vorschau",
         });
       };
     } catch (error: any) {
-      console.error("Error processing app:", error);
+      console.error("Fehler beim Verarbeiten:", error);
       toast({
         title: "Fehler",
         description: error.message || "Ein Fehler ist aufgetreten",
@@ -156,7 +158,7 @@ const Index = () => {
         description: "Die App wurde aktualisiert",
       });
     } catch (error: any) {
-      console.error("Error modifying app:", error);
+      console.error("Fehler beim Ändern:", error);
       toast({
         title: "Fehler",
         description: error.message || "Änderungen konnten nicht angewendet werden",
@@ -187,12 +189,12 @@ const Index = () => {
       setTimeout(() => {
         toast({
           title: "APK fertig! 🚀",
-          description: "Deine App wurde erfolgreich gebaut",
+          description: "Ihre App wurde erfolgreich gebaut",
         });
         setIsProcessing(false);
       }, 3000);
     } catch (error: any) {
-      console.error("Error building APK:", error);
+      console.error("Fehler beim APK Build:", error);
       toast({
         title: "Fehler",
         description: "APK konnte nicht erstellt werden",
@@ -218,50 +220,71 @@ const Index = () => {
               <Sparkles className="h-8 w-8 text-primary-foreground" />
             </div>
             <h1 className="text-5xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-              AI App Builder
+              KI App Builder
             </h1>
           </div>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Erstelle deine App per Spracheingabe - KI macht den Rest
+            Erstellen Sie mobile Apps mit der Kraft der KI
           </p>
         </div>
 
         {/* Main Content */}
         <div className="max-w-6xl mx-auto space-y-8">
-          {stage === "recording" && (
-            <div className="flex justify-center py-12">
-              <VoiceRecorder
-                onRecordingComplete={handleRecordingComplete}
-                isProcessing={isProcessing}
-              />
-            </div>
-          )}
+          <Tabs defaultValue="classic" className="w-full">
+            <TabsList className="grid w-full max-w-md mx-auto grid-cols-2 mb-8">
+              <TabsTrigger value="classic" className="gap-2">
+                <Mic className="w-4 h-4" />
+                Klassischer Modus
+              </TabsTrigger>
+              <TabsTrigger value="voice" className="gap-2">
+                <Volume2 className="w-4 h-4" />
+                Voice-Chat (Echtzeit)
+              </TabsTrigger>
+            </TabsList>
 
-          {stage === "processing" && (
-            <div className="py-12">
-              <AIProcessingView
-                currentStep={currentStep}
-                steps={processingSteps}
-              />
-            </div>
-          )}
+            <TabsContent value="classic">
+              {stage === "recording" && (
+                <div className="flex justify-center py-12">
+                  <VoiceRecorder
+                    onRecordingComplete={handleRecordingComplete}
+                    isProcessing={isProcessing}
+                  />
+                </div>
+              )}
 
-          {(stage === "preview" || stage === "chat") && (
-            <div className="space-y-8">
-              <CodePreview
-                generatedCode={generatedCode}
-                appIcon={appIcon}
-                onDownloadAPK={handleDownloadAPK}
-                isBuilding={isProcessing && stage === "preview"}
-              />
+              {stage === "processing" && (
+                <div className="py-12">
+                  <AIProcessingView
+                    currentStep={currentStep}
+                    steps={processingSteps}
+                  />
+                </div>
+              )}
 
-              <ChatInterface
-                messages={messages}
-                onSendMessage={handleSendMessage}
-                isProcessing={isProcessing}
-              />
-            </div>
-          )}
+              {(stage === "preview" || stage === "chat") && (
+                <div className="space-y-8">
+                  <CodePreview
+                    generatedCode={generatedCode}
+                    appIcon={appIcon}
+                    onDownloadAPK={handleDownloadAPK}
+                    isBuilding={isProcessing && stage === "preview"}
+                  />
+
+                  <ChatInterface
+                    messages={messages}
+                    onSendMessage={handleSendMessage}
+                    isProcessing={isProcessing}
+                  />
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="voice">
+              <div className="max-w-4xl mx-auto py-12">
+                <RealtimeVoiceChat />
+              </div>
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
     </div>
