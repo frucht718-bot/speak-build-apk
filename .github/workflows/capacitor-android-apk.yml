@@ -40,7 +40,7 @@ jobs:
           npm i -D @capacitor/cli @capacitor/assets
           npm i @capacitor/core
           if [ ! -f capacitor.config.ts ] && [ ! -f capacitor.config.json ]; then
-            npx cap init "Speak Build APK" "com.frucht718.speakbuildapk" --web-dir=dist --npm-client=npm
+            npx cap init "Speak Build APK" "com.frucht718.speakbuildapk" --web-dir=dist
           fi
 
       - name: Build web (Vite)
