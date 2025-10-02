@@ -56,15 +56,7 @@ jobs:
       - name: Build web (Vite)
         run: npm run build
 
-      - name: Add Android platform
-        run: |
-          if [ ! -d android ]; then
-            npx cap add android
-          fi
-          chmod +x android/gradlew || true
-          echo "=== android root ==="; ls -la android || true
-          test -f android/gradlew || { echo "::error::gradlew fehlt"; exit 1; }
-
+      # -- NEU: Java & Android SDK VOR cap add --
       - name: Setup Java 17
         uses: actions/setup-java@v4
         with:
@@ -78,6 +70,37 @@ jobs:
         run: |
           sdkmanager --install "platform-tools" "platforms;android-34" "build-tools;34.0.0"
           yes | sdkmanager --licenses || true
+
+      - name: Diagnose Capacitor env
+        run: |
+          node -v
+          npm -v
+          npx cap --version || true
+          npx cap doctor || true
+
+      - name: Add Android platform (mit Logs & Fallback)
+        run: |
+          set -euxo pipefail
+          npx cap add android || {
+            echo "::group::npm logs"
+            (ls -1 ~/.npm/_logs/ && tail -n +1 ~/.npm/_logs/*) || true
+            echo "::endgroup::"
+            exit 1
+          }
+          test -d android
+          chmod +x android/gradlew || true
+
+          # Fallback: Wrapper not found -> mit System-Gradle erzeugen
+          if [ ! -f android/gradlew ]; then
+            echo "gradlew fehlt – erzeuge Wrapper 8.6 via system gradle…"
+            sudo apt-get update
+            sudo apt-get install -y gradle
+            gradle -p android wrapper --gradle-version 8.6
+            chmod +x android/gradlew
+          fi
+
+          echo "=== android root ==="
+          ls -la android || true
 
       - name: Capacitor sync
         run: npx cap sync android
