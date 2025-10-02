@@ -2,13 +2,10 @@ import { useState } from "react";
 import { VoiceRecorder } from "@/components/VoiceRecorder";
 import { AIProcessingView } from "@/components/AIProcessingView";
 import { CodePreview } from "@/components/CodePreview";
-import { ChatInterface } from "@/components/ChatInterface";
-import { RealtimeVoiceChat } from "@/components/RealtimeVoiceChat";
 import { ParticleBackground } from "@/components/ParticleBackground";
-import { FeatureCard } from "@/components/FeatureCard";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Sparkles, Loader2, Code, Image, CheckCircle2, Mic, Volume2, Zap, Wand2, Rocket, MessageSquare } from "lucide-react";
+import { Loader2, Code, Image, CheckCircle2, Mic, MessageSquare } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TextChatInterface } from "@/components/TextChatInterface";
 
@@ -174,35 +171,23 @@ const Index = () => {
 
   const handleDownloadAPK = async () => {
     setIsProcessing(true);
-    
     try {
       const { data, error } = await supabase.functions.invoke("build-apk", {
         body: { code: generatedCode },
       });
-
       if (error) throw error;
 
-      // Simulate APK download
-      toast({
-        title: "APK wird erstellt",
-        description: "Der Download startet in Kürze...",
-      });
-
-      // In real implementation, this would download the actual APK
-      setTimeout(() => {
-        toast({
-          title: "APK fertig! 🚀",
-          description: "Ihre App wurde erfolgreich gebaut",
-        });
-        setIsProcessing(false);
-      }, 3000);
+      const apkUrl = data?.apkUrl;
+      if (apkUrl) {
+        toast({ title: "APK bereit", description: "Download startet..." });
+        window.open(apkUrl, "_blank");
+      } else {
+        toast({ title: "Hinweis", description: "APK-URL nicht verfügbar" });
+      }
     } catch (error: any) {
       console.error("Fehler beim APK Build:", error);
-      toast({
-        title: "Fehler",
-        description: "APK konnte nicht erstellt werden",
-        variant: "destructive",
-      });
+      toast({ title: "Fehler", description: error.message || "APK konnte nicht erstellt werden", variant: "destructive" });
+    } finally {
       setIsProcessing(false);
     }
   };
@@ -220,78 +205,40 @@ const Index = () => {
       </div>
 
       <div className="container mx-auto px-4 py-12">
-        {/* Header with enhanced animations */}
-        <div className="text-center mb-16 space-y-6">
-          {/* Main Title */}
-          <div className="animate-slide-up">
-            <div className="flex items-center justify-center gap-4 mb-6">
-              <div className="relative group">
-                <div className="absolute inset-0 bg-gradient-primary opacity-50 blur-2xl group-hover:blur-3xl transition-all duration-500 animate-pulse-glow" />
-                <div className="relative p-4 bg-gradient-primary rounded-3xl shadow-glow">
-                  <Sparkles className="h-10 w-10 text-primary-foreground animate-float" />
-                </div>
-              </div>
-              
-              <h1 className="text-6xl md:text-7xl font-bold bg-gradient-to-r from-primary via-cyber-cyan to-primary bg-clip-text text-transparent animate-gradient">
-                KI App Builder
-              </h1>
-            </div>
-            
-            <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-              Erstellen Sie mobile Apps mit der Kraft der KI – 
-              <span className="text-primary font-semibold"> in Sekunden</span>
-            </p>
-          </div>
-
-          {/* Feature Pills */}
-          <div className="flex flex-wrap items-center justify-center gap-3 animate-slide-up" style={{ animationDelay: "200ms" }}>
-            {[
-              { icon: Zap, text: "Blitzschnell" },
-              { icon: Wand2, text: "KI-gesteuert" },
-              { icon: Rocket, text: "Sofort einsatzbereit" }
-            ].map((feature, i) => (
-              <div
-                key={i}
-                className="flex items-center gap-2 px-4 py-2 rounded-full bg-muted/50 backdrop-blur-sm border border-border/50 hover:border-primary/50 hover:bg-primary/10 transition-all duration-300 group cursor-default"
-              >
-                <feature.icon className="w-4 h-4 text-primary group-hover:scale-110 transition-transform" />
-                <span className="text-sm font-medium">{feature.text}</span>
-              </div>
-            ))}
-          </div>
+        {/* Minimaler Header */}
+        <div className="text-center mb-10">
+          <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-primary via-cyber-cyan to-primary bg-clip-text text-transparent animate-gradient">
+            KI App Builder
+          </h1>
+          <p className="mt-3 text-sm md:text-base text-muted-foreground">
+            Android APK Builder – nur Smartphone-Apps. Kein Code, nur klare Schritte.
+          </p>
         </div>
 
         {/* Main Content */}
         <div className="max-w-6xl mx-auto space-y-12">
-          <Tabs defaultValue="classic" className="w-full">
+          <Tabs defaultValue="sprache" className="w-full">
             <div className="relative mb-12">
               <div className="absolute inset-0 bg-gradient-primary opacity-10 blur-3xl rounded-full" />
-              <TabsList className="relative grid w-full max-w-3xl mx-auto grid-cols-3 p-2 bg-muted/30 backdrop-blur-glass border border-border/50 shadow-glass">
+              <TabsList className="relative grid w-full max-w-3xl mx-auto grid-cols-2 p-2 bg-muted/30 backdrop-blur-glass border border-border/50 shadow-glass">
                 <TabsTrigger 
-                  value="classic" 
+                  value="sprache" 
                   className="gap-2 data-[state=active]:bg-gradient-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-glow transition-all duration-300"
                 >
                   <Mic className="w-4 h-4" />
-                  Voice-to-App
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="voice" 
-                  className="gap-2 data-[state=active]:bg-gradient-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-glow transition-all duration-300"
-                >
-                  <Volume2 className="w-4 h-4" />
-                  Voice-Chat
+                  Spracheingabe
                 </TabsTrigger>
                 <TabsTrigger 
                   value="text" 
                   className="gap-2 data-[state=active]:bg-gradient-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-glow transition-all duration-300"
                 >
                   <MessageSquare className="w-4 h-4" />
-                  KI Text-Chat
+                  Chat
                 </TabsTrigger>
               </TabsList>
             </div>
 
-            <TabsContent value="classic">
+            <TabsContent value="sprache">
               {stage === "recording" && (
                 <div className="flex justify-center py-12">
                   <VoiceRecorder
@@ -310,29 +257,18 @@ const Index = () => {
                 </div>
               )}
 
-              {(stage === "preview" || stage === "chat") && (
+              {(stage === "preview") && (
                 <div className="space-y-8">
                   <CodePreview
                     generatedCode={generatedCode}
                     appIcon={appIcon}
                     onDownloadAPK={handleDownloadAPK}
-                    isBuilding={isProcessing && stage === "preview"}
-                  />
-
-                  <ChatInterface
-                    messages={messages}
-                    onSendMessage={handleSendMessage}
-                    isProcessing={isProcessing}
+                    isBuilding={isProcessing}
                   />
                 </div>
               )}
             </TabsContent>
 
-            <TabsContent value="voice">
-              <div className="max-w-4xl mx-auto py-12">
-                <RealtimeVoiceChat />
-              </div>
-            </TabsContent>
 
             <TabsContent value="text">
               <div className="max-w-5xl mx-auto py-12">

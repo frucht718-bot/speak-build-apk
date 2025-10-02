@@ -20,6 +20,7 @@ export const TextChatInterface = () => {
   const [input, setInput] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [provider, setProvider] = useState<"gemini" | "groq" | "openai">("gemini");
+  const [model, setModel] = useState<string>("mixtral-8x7b-32768");
   const scrollRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -51,6 +52,7 @@ export const TextChatInterface = () => {
             content: m.content
           })),
           provider,
+          model,
         },
       });
 
@@ -115,35 +117,52 @@ export const TextChatInterface = () => {
                 </h3>
               </div>
               <p className="text-sm text-muted-foreground mt-2">
-                Chatte mit verschiedenen KI-Modellen
+                Fest integriert: Android APK Builder. Keine Codeausgabe – nur klare Schritte.
               </p>
             </div>
             
-            <Select value={provider} onValueChange={(v: any) => setProvider(v)}>
-              <SelectTrigger className="w-[200px] bg-background/50 border-border/50">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="gemini">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="h-4 w-4 text-primary" />
-                    Gemini 2.5 Flash
-                  </div>
-                </SelectItem>
-                <SelectItem value="groq">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="h-4 w-4 text-cyber-cyan" />
-                    Groq Mixtral
-                  </div>
-                </SelectItem>
-                <SelectItem value="openai">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="h-4 w-4 text-green-500" />
-                    OpenAI GPT-4o
-                  </div>
-                </SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="flex items-center gap-3">
+              <Select value={provider} onValueChange={(v: any) => setProvider(v)}>
+                <SelectTrigger className="w-[200px] bg-background/50 border-border/50">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="gemini">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="h-4 w-4 text-primary" />
+                      Gemini 2.5 Flash
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="groq">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="h-4 w-4 text-cyber-cyan" />
+                      Groq (Modelle wählbar)
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="openai">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="h-4 w-4 text-green-500" />
+                      OpenAI GPT-4o
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+
+              {provider === 'groq' && (
+                <Select value={model} onValueChange={(v: any) => setModel(v)}>
+                  <SelectTrigger className="w-[230px] bg-background/50 border-border/50">
+                    <SelectValue placeholder="Groq-Modell" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="mixtral-8x7b-32768">Mixtral 8x7B (32k)</SelectItem>
+                    <SelectItem value="llama3-70b-8192">Llama 3 70B (8k)</SelectItem>
+                    <SelectItem value="llama3-8b-8192">Llama 3 8B (8k)</SelectItem>
+                    <SelectItem value="gemma2-9b-it">Gemma 2 9B (IT)</SelectItem>
+                    <SelectItem value="qwen2-72b-instruct">Qwen2 72B Instruct</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
           </div>
 
           {/* Messages */}
@@ -234,7 +253,7 @@ export const TextChatInterface = () => {
               </Button>
             </div>
             <p className="text-xs text-muted-foreground mt-3 text-center">
-              Drücke Enter zum Senden • {getProviderLabel(provider)} aktiv
+              Drücke Enter zum Senden • {getProviderLabel(provider)} aktiv{provider === 'groq' ? ` • Modell: ${model}` : ''}
             </p>
           </div>
         </div>

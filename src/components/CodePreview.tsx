@@ -32,10 +32,6 @@ export const CodePreview = ({
                   <Eye className="h-4 w-4" />
                   Vorschau
                 </TabsTrigger>
-                <TabsTrigger value="code" className="gap-2">
-                  <Code className="h-4 w-4" />
-                  Code
-                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="preview" className="mt-6">
@@ -65,13 +61,6 @@ export const CodePreview = ({
                 </div>
               </TabsContent>
 
-              <TabsContent value="code" className="mt-6">
-                <div className="bg-background/80 rounded-2xl p-6 max-h-[500px] overflow-auto border border-border/30">
-                  <pre className="text-sm text-foreground/90 font-mono">
-                    <code>{generatedCode || "// Dein generierter Code wird hier angezeigt..."}</code>
-                  </pre>
-                </div>
-              </TabsContent>
             </Tabs>
           </div>
 
