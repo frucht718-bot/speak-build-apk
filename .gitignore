@@ -22,3 +22,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+# Android signing & local stuff
+*.keystore
+*.jks
+debug.keystore
+release.keystore
+apk_out/
