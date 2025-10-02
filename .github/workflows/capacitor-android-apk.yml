@@ -32,12 +32,12 @@ jobs:
       - name: Build web (Vite)
         run: npm run build
 
-      - name: Add Android (no sync yet)
+      - name: Add Android
         run: |
           npx cap add android || true
-          echo "org.gradle.jvmargs=-Xmx2g -XX:+UseParallelGC" | tee -a android/gradle.properties >/dev/null
+          echo "org.gradle.jvmargs=-Xmx2g -XX:+UseParallelGC" >> android/gradle.properties
 
-      - name: Put Icon with ImageMagick (no sharp)
+      - name: Put Icon with ImageMagick
         run: |
           sudo apt-get update
           sudo apt-get install -y imagemagick
@@ -51,7 +51,7 @@ jobs:
               $IM_BIN assets/icon.png -resize "${SZ[$D]}x${SZ[$D]}" "$RES/mipmap-$D/ic_launcher_round.png"
             done
           else
-            echo "WARN: assets/icon.png fehlt – Standard-Launcher wird verwendet."
+            echo "WARN: assets/icon.png fehlt – Standard-Launcher bleibt."
           fi
 
       - name: Setup Java 21
@@ -68,17 +68,32 @@ jobs:
           sdkmanager --install "platform-tools" "platforms;android-34" "build-tools;34.0.0"
           yes | sdkmanager --licenses
 
-      - name: Sync Android (nachdem JDK/SDK da sind)
+      - name: Sync Android
         run: npx cap sync android
 
       - name: Build Debug APK
         working-directory: android
         run: ./gradlew :app:assembleDebug
 
-      - name: Collect APKs
+      - name: List Gradle outputs
         run: |
+          echo "=== outputs tree ==="
+          ls -R android/app/build/outputs || true
+
+      - name: Collect APKs
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          shopt -s globstar nullglob
           mkdir -p apk_out
-          find android/app/build/outputs -type f ( -name "*.apk" -o -name "*.aab" ) -exec cp -v {} apk_out/ ;
+          files=(android/app/build/outputs/**/*.apk android/app/build/outputs/**/*.aab)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "Keine APK/AAB gefunden. Baum:"
+            find android/app/build -maxdepth 5 -type f | sed "s#^#  #"
+            exit 1
+          fi
+          printf "Kopiere %d Datei(en):\n" "${#files[@]}"
+          cp -v "${files[@]}" apk_out/
           ls -lh apk_out
 
       - name: Upload APK artifact
@@ -86,3 +101,5 @@ jobs:
         with:
           name: apk
           path: apk_out/*
+          if-no-files-found: error
+          retention-days: 7
