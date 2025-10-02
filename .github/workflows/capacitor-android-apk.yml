@@ -1,10 +1,8 @@
 name: Android APK (Capacitor)
-
 on:
   workflow_dispatch:
   push:
     branches: [ "main" ]
-
 jobs:
   build-apk:
     runs-on: ubuntu-latest
@@ -50,8 +48,6 @@ jobs:
               $IM_BIN assets/icon.png -resize "${SZ[$D]}x${SZ[$D]}" "$RES/mipmap-$D/ic_launcher.png"
               $IM_BIN assets/icon.png -resize "${SZ[$D]}x${SZ[$D]}" "$RES/mipmap-$D/ic_launcher_round.png"
             done
-          else
-            echo "WARN: assets/icon.png fehlt – Standard-Launcher bleibt."
           fi
 
       - name: Setup Java 21
@@ -76,44 +72,47 @@ jobs:
         run: ./gradlew :app:assembleRelease
 
       - name: List Gradle outputs
-        run: |
-          echo "=== outputs tree ==="
-          ls -R android/app/build/outputs || true
+        run: ls -R android/app/build/outputs || true
 
-      # ----- SIGNIEREN MIT DEINEM SECRET KEYSTORE -----
-      - name: Align & Sign Release APK (keystore from secrets)
+      - name: Align & Sign Release APK (secrets, mit Fallback)
+        shell: bash
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        shell: bash
         run: |
           set -Eeuo pipefail
-          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > release.keystore
+          printf "%s" "$ANDROID_KEYSTORE_BASE64" | base64 -d > release.keystore
 
-          # Robust APK-Find (app-release-unsigned.apk oder app-release.apk)
-          APK="$(ls -t android/app/build/outputs/apk/release/*.apk 2>/dev/null | head -n1)"
+          APK="$(ls -t android/app/build/outputs/apk/release/*.apk 2>/dev/null | head -n1 || true)"
           if [ -z "$APK" ]; then
-            echo "Keine Release-APK gefunden"; find android/app/build -maxdepth 5 -type f; exit 1
+            echo "::error::Keine Release-APK gefunden"; exit 1
           fi
-          echo "APK gefunden: $APK"
 
           BT="${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}/build-tools/34.0.0"
-          if [ ! -x "$BT/apksigner" ] || [ ! -x "$BT/zipalign" ]; then
-            BT="$(ls -d ${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}/build-tools/* | sort -V | tail -n1)"
+          [ -x "$BT/apksigner" ] || BT="$(ls -d ${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}/build-tools/* | sort -V | tail -n1)"
+          echo "Build-tools: $BT"
+
+          echo "Keystore/Pass/Alias prüfen…"
+          if ! keytool -list -keystore release.keystore -storepass "$ANDROID_KEYSTORE_PASSWORD" -alias "$ANDROID_KEY_ALIAS" >/dev/null 2>&1; then
+            echo "::warning::Keystore ungültig (Pass/Alias). Fallback auf temporären CI-Schlüssel."
+            keytool -genkeypair -v -keystore temp.keystore -storepass android -alias androidreleasekey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Temp,O=CI,C=US"
+            "$BT/zipalign" -f -p 4 "$APK" aligned.apk
+            "$BT/apksigner" sign --ks temp.keystore --ks-key-alias androidreleasekey --ks-pass pass:android --key-pass pass:android --out app-release-signed-TEMPKEY.apk aligned.apk
+            "$BT/apksigner" verify --print-certs app-release-signed-TEMPKEY.apk
+            mkdir -p apk_out; mv app-release-signed-TEMPKEY.apk apk_out/
+            exit 0
           fi
-          echo "Nutze Build-Tools: $BT"
 
           "$BT/zipalign" -f -p 4 "$APK" aligned.apk
           "$BT/apksigner" sign \
             --ks release.keystore --ks-key-alias "$ANDROID_KEY_ALIAS" \
-            --ks-pass env:ANDROID_KEYSTORE_PASSWORD --key-pass env:ANDROID_KEY_PASSWORD \
+            --ks-pass pass:"$ANDROID_KEYSTORE_PASSWORD" --key-pass pass:"$ANDROID_KEY_PASSWORD" \
             --out app-release-signed.apk aligned.apk
 
           "$BT/apksigner" verify --print-certs app-release-signed.apk
-          mkdir -p apk_out
-          mv app-release-signed.apk apk_out/
+          mkdir -p apk_out; mv app-release-signed.apk apk_out/
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
