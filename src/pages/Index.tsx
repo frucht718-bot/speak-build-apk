@@ -8,8 +8,9 @@ import { ParticleBackground } from "@/components/ParticleBackground";
 import { FeatureCard } from "@/components/FeatureCard";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Sparkles, Loader2, Code, Image, CheckCircle2, Mic, Volume2, Zap, Wand2, Rocket } from "lucide-react";
+import { Sparkles, Loader2, Code, Image, CheckCircle2, Mic, Volume2, Zap, Wand2, Rocket, MessageSquare } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { TextChatInterface } from "@/components/TextChatInterface";
 
 type AppStage = "recording" | "processing" | "preview" | "chat";
 
@@ -265,20 +266,27 @@ const Index = () => {
           <Tabs defaultValue="classic" className="w-full">
             <div className="relative mb-12">
               <div className="absolute inset-0 bg-gradient-primary opacity-10 blur-3xl rounded-full" />
-              <TabsList className="relative grid w-full max-w-2xl mx-auto grid-cols-2 p-2 bg-muted/30 backdrop-blur-glass border border-border/50 shadow-glass">
+              <TabsList className="relative grid w-full max-w-3xl mx-auto grid-cols-3 p-2 bg-muted/30 backdrop-blur-glass border border-border/50 shadow-glass">
                 <TabsTrigger 
                   value="classic" 
                   className="gap-2 data-[state=active]:bg-gradient-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-glow transition-all duration-300"
                 >
                   <Mic className="w-4 h-4" />
-                  Klassischer Modus
+                  Voice-to-App
                 </TabsTrigger>
                 <TabsTrigger 
                   value="voice" 
                   className="gap-2 data-[state=active]:bg-gradient-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-glow transition-all duration-300"
                 >
                   <Volume2 className="w-4 h-4" />
-                  Voice-Chat (Echtzeit)
+                  Voice-Chat
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="text" 
+                  className="gap-2 data-[state=active]:bg-gradient-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-glow transition-all duration-300"
+                >
+                  <MessageSquare className="w-4 h-4" />
+                  KI Text-Chat
                 </TabsTrigger>
               </TabsList>
             </div>
@@ -323,6 +331,12 @@ const Index = () => {
             <TabsContent value="voice">
               <div className="max-w-4xl mx-auto py-12">
                 <RealtimeVoiceChat />
+              </div>
+            </TabsContent>
+
+            <TabsContent value="text">
+              <div className="max-w-5xl mx-auto py-12">
+                <TextChatInterface />
               </div>
             </TabsContent>
           </Tabs>
