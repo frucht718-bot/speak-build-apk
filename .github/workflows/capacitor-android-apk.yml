@@ -1,8 +1,10 @@
 name: Android APK (Capacitor)
+
 on:
   workflow_dispatch:
   push:
     branches: [ "main" ]
+
 jobs:
   build-apk:
     runs-on: ubuntu-latest
@@ -30,25 +32,16 @@ jobs:
       - name: Build web (Vite)
         run: npm run build
 
-      - name: Add Android
+      - name: Add/Ensure Android platform (creates gradlew if missing)
         run: |
-          npx cap add android || true
-          echo "org.gradle.jvmargs=-Xmx2g -XX:+UseParallelGC" >> android/gradle.properties
-
-      - name: Put Icon with ImageMagick
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y imagemagick
-          if [ -f assets/icon.png ]; then
-            RES="android/app/src/main/res"
-            declare -A SZ=( [mdpi]=48 [hdpi]=72 [xhdpi]=96 [xxhdpi]=144 [xxxhdpi]=192 )
-            IM_BIN="convert"; command -v magick >/dev/null 2>&1 && IM_BIN="magick convert"
-            for D in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
-              mkdir -p "$RES/mipmap-$D"
-              $IM_BIN assets/icon.png -resize "${SZ[$D]}x${SZ[$D]}" "$RES/mipmap-$D/ic_launcher.png"
-              $IM_BIN assets/icon.png -resize "${SZ[$D]}x${SZ[$D]}" "$RES/mipmap-$D/ic_launcher_round.png"
-            done
+          if [ ! -d android ] || [ ! -f android/gradlew ]; then
+            echo "Adding Android platform (gradlew wrapper)…"
+            npx cap add android
+          else
+            echo "Android platform already present."
           fi
+          chmod +x android/gradlew || true
+          ls -la android | sed -n "1,120p"
 
       - name: Setup Java 21
         uses: actions/setup-java@v4
@@ -69,7 +62,10 @@ jobs:
 
       - name: Build Release APK
         working-directory: android
-        run: ./gradlew :app:assembleRelease
+        run: |
+          set -e
+          ./gradlew --version || true
+          ./gradlew :app:assembleRelease
 
       - name: List Gradle outputs
         run: ls -R android/app/build/outputs || true
