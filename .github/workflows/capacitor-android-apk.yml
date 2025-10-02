@@ -32,16 +32,13 @@ jobs:
       - name: Build web (Vite)
         run: npm run build
 
-      - name: Add/Ensure Android platform (creates gradlew if missing)
+      - name: Add/Ensure Android platform
         run: |
-          if [ ! -d android ] || [ ! -f android/gradlew ]; then
-            echo "Adding Android platform (gradlew wrapper)…"
+          if [ ! -d android ]; then
+            echo "Adding Android platform…"
             npx cap add android
-          else
-            echo "Android platform already present."
           fi
-          chmod +x android/gradlew || true
-          ls -la android | sed -n "1,120p"
+          ls -la android | sed -n "1,200p" || true
 
       - name: Setup Java 21
         uses: actions/setup-java@v4
@@ -55,17 +52,35 @@ jobs:
       - name: Install Android packages
         run: |
           sdkmanager --install "platform-tools" "platforms;android-34" "build-tools;34.0.0"
-          yes | sdkmanager --licenses
+          yes | sdkmanager --licenses || true
+
+      # >>> NEU: Gradle bereitstellen & Wrapper erzeugen, wenn fehlt
+      - name: Setup Gradle (toolcache)
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Generate Gradle wrapper if missing
+        run: |
+          if [ ! -f android/gradlew ]; then
+            echo "gradlew missing — generating wrapper…"
+            gradle -p android wrapper --gradle-version 8.7
+            chmod +x android/gradlew
+          fi
+          ls -la android | sed -n "1,200p"
 
       - name: Sync Android
         run: npx cap sync android
 
-      - name: Build Release APK
+      - name: Build Release APK (prefer wrapper; fallback to system Gradle)
         working-directory: android
         run: |
           set -e
-          ./gradlew --version || true
-          ./gradlew :app:assembleRelease
+          if [ -f ./gradlew ]; then
+            ./gradlew --version || true
+            ./gradlew :app:assembleRelease
+          else
+            echo "Wrapper still missing, using system gradle…"
+            gradle :app:assembleRelease
+          fi
 
       - name: List Gradle outputs
         run: ls -R android/app/build/outputs || true
@@ -79,36 +94,32 @@ jobs:
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           set -Eeuo pipefail
-          printf "%s" "$ANDROID_KEYSTORE_BASE64" | base64 -d > release.keystore
-
           APK="$(ls -t android/app/build/outputs/apk/release/*.apk 2>/dev/null | head -n1 || true)"
           if [ -z "$APK" ]; then
             echo "::error::Keine Release-APK gefunden"; exit 1
           fi
+          printf "%s" "$ANDROID_KEYSTORE_BASE64" | base64 -d > release.keystore || true
 
           BT="${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}/build-tools/34.0.0"
           [ -x "$BT/apksigner" ] || BT="$(ls -d ${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}/build-tools/* | sort -V | tail -n1)"
-          echo "Build-tools: $BT"
 
-          echo "Keystore/Pass/Alias prüfen…"
-          if ! keytool -list -keystore release.keystore -storepass "$ANDROID_KEYSTORE_PASSWORD" -alias "$ANDROID_KEY_ALIAS" >/dev/null 2>&1; then
-            echo "::warning::Keystore ungültig (Pass/Alias). Fallback auf temporären CI-Schlüssel."
+          # Wenn Keystore/Secrets fehlen, temporären Key benutzen
+          if ! keytool -list -keystore release.keystore -storepass "${ANDROID_KEYSTORE_PASSWORD:-android}" -alias "${ANDROID_KEY_ALIAS:-androidreleasekey}" >/dev/null 2>&1; then
+            echo "::warning::Keystore/Secrets fehlen oder ungültig – Fallback-Key"
             keytool -genkeypair -v -keystore temp.keystore -storepass android -alias androidreleasekey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Temp,O=CI,C=US"
             "$BT/zipalign" -f -p 4 "$APK" aligned.apk
-            "$BT/apksigner" sign --ks temp.keystore --ks-key-alias androidreleasekey --ks-pass pass:android --key-pass pass:android --out app-release-signed-TEMPKEY.apk aligned.apk
-            "$BT/apksigner" verify --print-certs app-release-signed-TEMPKEY.apk
-            mkdir -p apk_out; mv app-release-signed-TEMPKEY.apk apk_out/
-            exit 0
+            "$BT/apksigner" sign --ks temp.keystore --ks-key-alias androidreleasekey --ks-pass pass:android --key-pass pass:android --out app-release-signed.apk aligned.apk
+          else
+            "$BT/zipalign" -f -p 4 "$APK" aligned.apk
+            "$BT/apksigner" sign \
+              --ks release.keystore --ks-key-alias "$ANDROID_KEY_ALIAS" \
+              --ks-pass pass:"$ANDROID_KEYSTORE_PASSWORD" --key-pass pass:"$ANDROID_KEY_PASSWORD" \
+              --out app-release-signed.apk aligned.apk
           fi
 
-          "$BT/zipalign" -f -p 4 "$APK" aligned.apk
-          "$BT/apksigner" sign \
-            --ks release.keystore --ks-key-alias "$ANDROID_KEY_ALIAS" \
-            --ks-pass pass:"$ANDROID_KEYSTORE_PASSWORD" --key-pass pass:"$ANDROID_KEY_PASSWORD" \
-            --out app-release-signed.apk aligned.apk
-
           "$BT/apksigner" verify --print-certs app-release-signed.apk
-          mkdir -p apk_out; mv app-release-signed.apk apk_out/
+          mkdir -p apk_out
+          mv app-release-signed.apk apk_out/
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
