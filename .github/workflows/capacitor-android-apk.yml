@@ -71,12 +71,18 @@ jobs:
       - name: Sync Android (nachdem JDK/SDK da sind)
         run: npx cap sync android
 
-      - name: Build Release APK
+      - name: Build Debug APK
         working-directory: android
         run: ./gradlew :app:assembleDebug
+
+      - name: Collect APKs
+        run: |
+          mkdir -p apk_out
+          find android/app/build/outputs -type f ( -name "*.apk" -o -name "*.aab" ) -exec cp -v {} apk_out/ ;
+          ls -lh apk_out
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: apk
-          path: android/app/build/outputs/apk/release/*.apk
+          path: apk_out/*
