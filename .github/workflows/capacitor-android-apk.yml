@@ -31,17 +31,13 @@ jobs:
       - name: Build web (Vite)
         run: npm run build
 
-      - name: Add/Ensure Android platform (creates Gradle project)
+      - name: Add/Ensure Android platform
         run: |
           if [ ! -d android ]; then
             npx cap add android
           fi
           chmod +x android/gradlew || true
           echo "=== android root ==="; ls -la android || true
-          echo "=== wrapper files ==="; ls -la android/gradle/wrapper || true
-          echo "=== wrapper.properties (pre) ==="; cat android/gradle/wrapper/gradle-wrapper.properties || true
-          echo "=== top build.gradle ==="; sed -n "1,160p" android/build.gradle || true
-          echo "=== app build.gradle ==="; sed -n "1,160p" android/app/build.gradle || true
 
       - name: Setup Java 17
         uses: actions/setup-java@v4
@@ -57,74 +53,121 @@ jobs:
           sdkmanager --install "platform-tools" "platforms;android-34" "build-tools;34.0.0"
           yes | sdkmanager --licenses || true
 
-      - name: Auto-fix Gradle wrapper to match AGP (only if needed)
+      # ---- Hardening/Patches bevor gebaut wird ----
+      - name: Patch Android Gradle/Kotlin/SDK/namespace + repos
         run: |
           set -e
-          need_fix=false
-          if [ ! -f android/gradle/wrapper/gradle-wrapper.properties ]; then
-            need_fix=true
-            echo "No wrapper.properties found → will generate"
-          fi
+          AROOT="android"
+          APP="$AROOT/app"
+          MANIFEST="$APP/src/main/AndroidManifest.xml"
 
-          # AGP-Version auslesen
-          AGP="$(grep -Eo "com\.android\.tools\.build:gradle:[0-9]+\.[0-9]+(\.[0-9]+)?" -h android/build.gradle android/build.gradle.kts 2>/dev/null | head -n1 | sed "s/.*gradle://")"
-          echo "Detected AGP: ${AGP:-unknown}"
+          # 1) Repositories sicherstellen (google + mavenCentral)
+          for F in "$AROOT/build.gradle" "$AROOT/build.gradle.kts"; do
+            [ -f "$F" ] || continue
+            if ! grep -q "google()" "$F"; then
+              sed -i "1s;^;buildscript { repositories { google(); mavenCentral() } }\nallprojects { repositories { google(); mavenCentral() } }\n;" "$F"
+            elif ! grep -q "mavenCentral()" "$F"; then
+              sed -i "s/google()/google()\\n        mavenCentral()/g" "$F"
+            fi
+          done
 
-          # Mapping AGP -> Gradle (sane defaults)
-          GV=""
-          if [ -n "$AGP" ]; then
-            MAJOR="$(echo "$AGP" | cut -d. -f1)"
-            MINOR="$(echo "$AGP" | cut -d. -f2)"
-            case "$MAJOR.$MINOR" in
-              8.0) GV=8.0 ;;
-              8.1) GV=8.2 ;;
-              8.2) GV=8.2 ;;
-              8.3) GV=8.4 ;;
-              8.4) GV=8.6 ;;
-              8.5) GV=8.7 ;;
-              8.6) GV=8.7 ;;
-              8.7) GV=8.9 ;;
-              *)   GV=8.2 ;;
-            esac
-          else
-            GV=8.2
-          fi
-          echo "Target Gradle: $GV"
-
-          if [ -f android/gradle/wrapper/gradle-wrapper.properties ]; then
-            CUR="$(grep -Eo "gradle-[0-9]+\.[0-9]+(\.[0-9]+)?-bin\.zip" android/gradle/wrapper/gradle-wrapper.properties | sed "s/gradle-//; s/-bin.zip//" | head -n1 || true)"
-            echo "Current wrapper Gradle: ${CUR:-none}"
-            if [ "$CUR" != "$GV" ] && [ -n "$GV" ]; then
-              need_fix=true
-              echo "Gradle wrapper version mismatch → will update"
+          # 2) AGP & Kotlin Versionen hart auf kompatibel setzen
+          #    AGP 8.4.2 <-> Gradle 8.6, Kotlin 1.9.24
+          # buildscript/classpath (Groovy)
+          if [ -f "$AROOT/build.gradle" ]; then
+            if grep -q "com.android.tools.build:gradle" "$AROOT/build.gradle"; then
+              sed -i "s/com\.android\.tools\.build:gradle:[^\"]*/com.android.tools.build:gradle:8.4.2/ /build.gradle
+            fi
+            if grep -q org.jetbrains.kotlin:kotlin-gradle-plugin /build.gradle; then
+              sed -i s/org.jetbrains.kotlin:kotlin-gradle-plugin:[^"]*/org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.24/" "$AROOT/build.gradle"
             fi
           fi
+          # plugins {} (KTS/Groovy)
+          for F in "$AROOT/build.gradle" "$AROOT/build.gradle.kts" "$APP/build.gradle" "$APP/build.gradle.kts"; do
+            [ -f "$F" ] || continue
+            sed -i "s/id[[:space:]]\+["]com.android.application[\"][[:space:]]*version[[:space:]]\+["][0-9.]+[\"]/id com.android.application version 8.4.2/" "$F" || true
+            sed -i "s/id[[:space:]]\+["]org.jetbrains.kotlin.android[\"][[:space:]]*version[[:space:]]\+["][0-9.]+[\"]/id org.jetbrains.kotlin.android version 1.9.24/" "$F" || true
+          done
 
-          if $need_fix; then
-            echo "Installing system gradle & generating wrapper $GV…"
-            sudo apt-get update
-            sudo apt-get install -y gradle
-            gradle -p android wrapper --gradle-version "$GV"
+          # 3) compile/target SDK = 34
+          for F in "$APP/build.gradle" "$APP/build.gradle.kts"; do
+            [ -f "$F" ] || continue
+            grep -q "compileSdk" "$F" && sed -i "s/compileSdk.*/compileSdk 34/" "$F" || echo "android { compileSdk 34 }" >> "$F"
+            if grep -q "defaultConfig" "$F"; then
+              sed -i "s/targetSdk.*/targetSdk 34/" "$F" || true
+            else
+              sed -i "/android[[:space:]]*{.*/a \ \ defaultConfig { targetSdk 34 }" "$F"
+            fi
+          done
+
+          # 4) namespace (falls fehlt) anhand packageName aus Manifest
+          if [ -f "$MANIFEST" ]; then
+            PKG="$(sed -n "s/.*package=\"\\([^\"]*\\)\".*/\\1/p" "$MANIFEST" | head -n1)"
+          fi
+          [ -n "$PKG" ] || PKG="com.frucht718.speakbuildapk"
+          for F in "$APP/build.gradle" "$APP/build.gradle.kts"; do
+            [ -f "$F" ] || continue
+            if ! grep -q "namespace" "$F"; then
+              sed -i "s/android[[:space:]]*{/&\n    namespace \"$PKG\"/" "$F"
+            fi
+          done
+
+          # 5) Gradle properties – Speicher & AndroidX
+          GP="$AROOT/gradle.properties"
+          touch "$GP"
+          grep -q "org.gradle.jvmargs" "$GP" || echo "org.gradle.jvmargs=-Xmx4g -Dkotlin.daemon.jvm.options=-Xmx2g" >> "$GP"
+          grep -q "android.useAndroidX" "$GP" || echo "android.useAndroidX=true" >> "$GP"
+
+          # 6) Monochrome-Icon (falls referenziert, aber fehlt) -> Dummy anlegen
+          MONO_DIR="$APP/src/main/res/mipmap-anydpi-v26"
+          MONO_XML="$MONO_DIR/ic_launcher_monochrome.xml"
+          if [ -f "$APP/src/main/res/mipmap-anydpi-v26/ic_launcher.xml" ] && [ ! -f "$MONO_XML" ]; then
+            mkdir -p "$MONO_DIR"
+            cat > "$MONO_XML" <<EOF
+<?xml version="1.0" encoding="utf-8"?>
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+  <background android:drawable="@mipmap/ic_launcher_background"/>
+  <foreground android:drawable="@mipmap/ic_launcher_foreground"/>
+</adaptive-icon>
+EOF
           fi
 
+      - name: Ensure Gradle wrapper (8.6)
+        run: |
+          set -e
+          if [ ! -f android/gradle/wrapper/gradle-wrapper.properties ] || ! grep -q "gradle-8.6-bin.zip" android/gradle/wrapper/gradle-wrapper.properties; then
+            echo "Installing system Gradle & generating wrapper 8.6…"
+            sudo apt-get update
+            sudo apt-get install -y gradle
+            gradle -p android wrapper --gradle-version 8.6
+          fi
           chmod +x android/gradlew || true
-          echo "=== wrapper.properties (post) ==="; cat android/gradle/wrapper/gradle-wrapper.properties || true
+          echo "=== wrapper.properties ==="; cat android/gradle/wrapper/gradle-wrapper.properties || true
 
-      - name: Sync Android
+      - name: Sync Android (Capacitor)
         run: npx cap sync android
 
       - name: Build Release APK
         working-directory: android
         run: |
           set -e
-          echo "=== pwd ==="; pwd
-          echo "=== here files ==="; ls -la
           ./gradlew --version || true
-          # Build
           ./gradlew :app:assembleRelease --no-daemon --stacktrace --warning-mode all
 
       - name: List Gradle outputs
+        if: always()
         run: ls -R android/app/build/outputs || true
+
+      - name: Upload build logs (always)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gradle-logs
+          path: |
+            android/**/build/reports/**
+            android/**/outputs/logs/**
+            android/gradle/wrapper/gradle-wrapper.properties
+          retention-days: 3
 
       - name: Align & Sign Release APK (with secrets or temp key)
         shell: bash
