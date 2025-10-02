@@ -39,7 +39,7 @@ jobs:
           chmod +x android/gradlew || true
           echo "=== android root ==="; ls -la android || true
           echo "=== wrapper files ==="; ls -la android/gradle/wrapper || true
-          echo "=== wrapper.properties ==="; cat android/gradle/wrapper/gradle-wrapper.properties || true
+          echo "=== wrapper.properties (pre) ==="; cat android/gradle/wrapper/gradle-wrapper.properties || true
           echo "=== top build.gradle ==="; sed -n "1,160p" android/build.gradle || true
           echo "=== app build.gradle ==="; sed -n "1,160p" android/app/build.gradle || true
 
@@ -57,34 +57,71 @@ jobs:
           sdkmanager --install "platform-tools" "platforms;android-34" "build-tools;34.0.0"
           yes | sdkmanager --licenses || true
 
-      # Falls gradlew fehlt: system-Gradle installieren und den Wrapper erzeugen
-      - name: Ensure Gradle wrapper (generate if missing)
+      - name: Auto-fix Gradle wrapper to match AGP (only if needed)
         run: |
-          if [ ! -f android/gradlew ]; then
-            echo "gradlew missing — installing system gradle & generating wrapper…"
+          set -e
+          need_fix=false
+          if [ ! -f android/gradle/wrapper/gradle-wrapper.properties ]; then
+            need_fix=true
+            echo "No wrapper.properties found → will generate"
+          fi
+
+          # AGP-Version auslesen
+          AGP="$(grep -Eo "com\.android\.tools\.build:gradle:[0-9]+\.[0-9]+(\.[0-9]+)?" -h android/build.gradle android/build.gradle.kts 2>/dev/null | head -n1 | sed "s/.*gradle://")"
+          echo "Detected AGP: ${AGP:-unknown}"
+
+          # Mapping AGP -> Gradle (sane defaults)
+          GV=""
+          if [ -n "$AGP" ]; then
+            MAJOR="$(echo "$AGP" | cut -d. -f1)"
+            MINOR="$(echo "$AGP" | cut -d. -f2)"
+            case "$MAJOR.$MINOR" in
+              8.0) GV=8.0 ;;
+              8.1) GV=8.2 ;;
+              8.2) GV=8.2 ;;
+              8.3) GV=8.4 ;;
+              8.4) GV=8.6 ;;
+              8.5) GV=8.7 ;;
+              8.6) GV=8.7 ;;
+              8.7) GV=8.9 ;;
+              *)   GV=8.2 ;;
+            esac
+          else
+            GV=8.2
+          fi
+          echo "Target Gradle: $GV"
+
+          if [ -f android/gradle/wrapper/gradle-wrapper.properties ]; then
+            CUR="$(grep -Eo "gradle-[0-9]+\.[0-9]+(\.[0-9]+)?-bin\.zip" android/gradle/wrapper/gradle-wrapper.properties | sed "s/gradle-//; s/-bin.zip//" | head -n1 || true)"
+            echo "Current wrapper Gradle: ${CUR:-none}"
+            if [ "$CUR" != "$GV" ] && [ -n "$GV" ]; then
+              need_fix=true
+              echo "Gradle wrapper version mismatch → will update"
+            fi
+          fi
+
+          if $need_fix; then
+            echo "Installing system gradle & generating wrapper $GV…"
             sudo apt-get update
             sudo apt-get install -y gradle
-            gradle -p android wrapper --gradle-version 8.7
+            gradle -p android wrapper --gradle-version "$GV"
           fi
+
           chmod +x android/gradlew || true
-          echo "=== after ensure ==="; ls -la android; ls -la android/gradle/wrapper || true
+          echo "=== wrapper.properties (post) ==="; cat android/gradle/wrapper/gradle-wrapper.properties || true
 
       - name: Sync Android
         run: npx cap sync android
 
-      - name: Build Release APK (prefer wrapper; fallback to system Gradle)
+      - name: Build Release APK
         working-directory: android
         run: |
           set -e
           echo "=== pwd ==="; pwd
           echo "=== here files ==="; ls -la
-          if [ -f ./gradlew ]; then
-            ./gradlew --version || true
-            ./gradlew :app:assembleRelease --no-daemon --stacktrace --warning-mode all
-          else
-            echo "Wrapper still missing, falling back to system gradle…"
-            gradle :app:assembleRelease --stacktrace --warning-mode all
-          fi
+          ./gradlew --version || true
+          # Build
+          ./gradlew :app:assembleRelease --no-daemon --stacktrace --warning-mode all
 
       - name: List Gradle outputs
         run: ls -R android/app/build/outputs || true
