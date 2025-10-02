@@ -53,15 +53,57 @@ jobs:
           sdkmanager --install "platform-tools" "platforms;android-34" "build-tools;34.0.0"
           yes | sdkmanager --licenses || true
 
-      # ---- Hardening/Patches bevor gebaut wird ----
-      - name: Patch Android Gradle/Kotlin/SDK/namespace + repos
+      # ---------- Hardening / Auto-Patches ----------
+      - name: Patch Gradle repos, AGP/Kotlin, SDKs, namespace, Java/Kotlin 17, packaging, settings.gradle
         run: |
           set -e
           AROOT="android"
           APP="$AROOT/app"
           MANIFEST="$APP/src/main/AndroidManifest.xml"
 
-          # 1) Repositories sicherstellen
+          # settings.gradle/pluginManagement (Groovy + KTS)
+          for S in "$AROOT/settings.gradle" "$AROOT/settings.gradle.kts"; do
+            [ -f "$S" ] || continue
+            if ! grep -q "pluginManagement" "$S"; then
+              if [[ "$S" == *.kts ]]; then
+                cat >> "$S" <<EOF
+pluginManagement {
+  repositories {
+    google()
+    mavenCentral()
+    gradlePluginPortal()
+  }
+}
+dependencyResolutionManagement {
+  repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+  repositories {
+    google()
+    mavenCentral()
+  }
+}
+EOF
+              else
+                cat >> "$S" <<EOF
+pluginManagement {
+  repositories {
+    google()
+    mavenCentral()
+    gradlePluginPortal()
+  }
+}
+dependencyResolutionManagement {
+  repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+  repositories {
+    google()
+    mavenCentral()
+  }
+}
+EOF
+              fi
+            fi
+          done
+
+          # top-level build.gradle(.kts) — ensure google + mavenCentral (legacy projects)
           for F in "$AROOT/build.gradle" "$AROOT/build.gradle.kts"; do
             [ -f "$F" ] || continue
             if ! grep -q "google()" "$F"; then
@@ -71,7 +113,7 @@ jobs:
             fi
           done
 
-          # 2) AGP & Kotlin auf kompatibel setzen (AGP 8.4.2, Kotlin 1.9.24)
+          # Force AGP & Kotlin versions (compatible set)
           if [ -f "$AROOT/build.gradle" ]; then
             if grep -q "com.android.tools.build:gradle" "$AROOT/build.gradle"; then
               sed -i "s/com\.android\.tools\.build:gradle:[^\"]*/com.android.tools.build:gradle:8.4.2/ /build.gradle
@@ -86,36 +128,81 @@ jobs:
             sed -i "s/id[[:space:]]\+["]org.jetbrains.kotlin.android[\"][[:space:]]*version[[:space:]]\+["][0-9.]+[\"]/id org.jetbrains.kotlin.android version 1.9.24/" "$F" || true
           done
 
-          # 3) compile/target SDK 34
-          for F in "$APP/build.gradle" "$APP/build.gradle.kts"; do
-            [ -f "$F" ] || continue
-            grep -q "compileSdk" "$F" && sed -i "s/compileSdk.*/compileSdk 34/" "$F" || echo "android { compileSdk 34 }" >> "$F"
-            if grep -q "defaultConfig" "$F"; then
-              sed -i "s/targetSdk.*/targetSdk 34/" "$F" || true
-            else
-              sed -i "/android[[:space:]]*{.*/a \ \ defaultConfig { targetSdk 34 }" "$F"
-            fi
-          done
-
-          # 4) namespace (falls fehlt) aus Manifest ableiten
+          # SDKs / minSdk / namespace
           if [ -f "$MANIFEST" ]; then
             PKG="$(sed -n "s/.*package=\"\\([^\"]*\\)\".*/\\1/p" "$MANIFEST" | head -n1)"
           fi
           [ -n "$PKG" ] || PKG="com.frucht718.speakbuildapk"
+
           for F in "$APP/build.gradle" "$APP/build.gradle.kts"; do
             [ -f "$F" ] || continue
+            # compileSdk/targetSdk/minSdk
+            grep -q "compileSdk" "$F" && sed -i "s/compileSdk.*/compileSdk 34/" "$F" || echo "android { compileSdk 34 }" >> "$F"
+            if grep -q "defaultConfig" "$F"; then
+              sed -i "s/targetSdk.*/targetSdk 34/" "$F" || true
+              if grep -q "minSdk" "$F"; then
+                sed -i "s/minSdk.*/minSdk 23/" "$F" || true
+              else
+                sed -i "/defaultConfig[[:space:]]*{.*/a \ \ \ \ minSdk 23" "$F"
+              fi
+            else
+              sed -i "/android[[:space:]]*{.*/a \ \ defaultConfig { targetSdk 34\n        minSdk 23 }" "$F"
+            fi
+            # namespace
             if ! grep -q "namespace" "$F"; then
               sed -i "s/android[[:space:]]*{/&\n    namespace \"$PKG\"/" "$F"
             fi
           done
 
-          # 5) Gradle properties
+          # Java/Kotlin 17 + packaging excludes
+          if [ -f "$APP/build.gradle" ]; then
+            if ! grep -q "compileOptions" "$APP/build.gradle"; then
+              cat >> "$APP/build.gradle" <<EOF
+android {
+  compileOptions {
+    sourceCompatibility JavaVersion.VERSION_17
+    targetCompatibility JavaVersion.VERSION_17
+  }
+  kotlinOptions {
+    jvmTarget = "17"
+  }
+  packaging {
+    resources {
+      excludes += ["/META-INF/{AL2.0,LGPL2.1}", "/META-INF/DEPENDENCIES", "/META-INF/LICENSE*", "/META-INF/NOTICE*"]
+    }
+  }
+}
+EOF
+            fi
+          fi
+          if [ -f "$APP/build.gradle.kts" ]; then
+            if ! grep -q "compileOptions" "$APP/build.gradle.kts"; then
+              cat >> "$APP/build.gradle.kts" <<EOF
+android {
+  compileOptions {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+  }
+  kotlinOptions {
+    jvmTarget = "17"
+  }
+  packaging {
+    resources {
+      excludes += setOf("/META-INF/{AL2.0,LGPL2.1}", "/META-INF/DEPENDENCIES", "/META-INF/LICENSE*", "/META-INF/NOTICE*")
+    }
+  }
+}
+EOF
+            fi
+          fi
+
+          # Gradle properties
           GP="$AROOT/gradle.properties"
           touch "$GP"
           grep -q "org.gradle.jvmargs" "$GP" || echo "org.gradle.jvmargs=-Xmx4g -Dkotlin.daemon.jvm.options=-Xmx2g" >> "$GP"
           grep -q "android.useAndroidX" "$GP" || echo "android.useAndroidX=true" >> "$GP"
 
-          # 6) Dummy-Monochrome-Icon, falls referenziert aber fehlt
+          # Dummy monochrome icon if referenced
           MONO_DIR="$APP/src/main/res/mipmap-anydpi-v26"
           MONO_XML="$MONO_DIR/ic_launcher_monochrome.xml"
           if [ -f "$APP/src/main/res/mipmap-anydpi-v26/ic_launcher.xml" ] && [ ! -f "$MONO_XML" ]; then
@@ -144,12 +231,19 @@ EOF
       - name: Sync Android (Capacitor)
         run: npx cap sync android
 
-      - name: Build Release APK
+      - name: Build APK (Release with Debug fallback)
+        id: buildapk
         working-directory: android
         run: |
           set -e
           ./gradlew --version || true
-          ./gradlew :app:assembleRelease --no-daemon --stacktrace --warning-mode all
+          if ./gradlew :app:assembleRelease --no-daemon --stacktrace --warning-mode all; then
+            echo "apk_flavor=release" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::Release build failed — trying Debug"
+            ./gradlew :app:assembleDebug --no-daemon --stacktrace --warning-mode all
+            echo "apk_flavor=debug" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: List Gradle outputs
         if: always()
@@ -166,44 +260,50 @@ EOF
             android/gradle/wrapper/gradle-wrapper.properties
           retention-days: 3
 
-      - name: Align & Sign Release APK (with secrets or temp key)
+      - name: Align & Sign APK (release signed; debug just copy)
         shell: bash
         env:
+          FLAVOR: ${{ steps.buildapk.outputs.apk_flavor }}
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           set -Eeuo pipefail
-          APK="$(ls -t android/app/build/outputs/apk/release/*.apk 2>/dev/null | head -n1 || true)"
-          if [ -z "$APK" ]; then
-            echo "::error::Keine Release-APK gefunden"; exit 1
-          fi
-
-          : > release.keystore
-          if [ -n "${ANDROID_KEYSTORE_BASE64:-}" ]; then
-            printf "%s" "$ANDROID_KEYSTORE_BASE64" | base64 -d > release.keystore || true
-          fi
-
-          BT="${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}/build-tools/34.0.0"
-          [ -x "$BT/apksigner" ] || BT="$(ls -d ${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}/build-tools/* | sort -V | tail -n1)"
-
-          if ! keytool -list -keystore release.keystore -storepass "${ANDROID_KEYSTORE_PASSWORD:-android}" -alias "${ANDROID_KEY_ALIAS:-androidreleasekey}" >/dev/null 2>&1; then
-            echo "::warning::Keystore/Secrets fehlen – nutze temporären CI-Key"
-            keytool -genkeypair -v -keystore temp.keystore -storepass android -alias androidreleasekey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Temp,O=CI,C=US"
+          if [ "${FLAVOR:-release}" = "release" ]; then
+            APK="$(ls -t android/app/build/outputs/apk/release/*.apk 2>/dev/null | head -n1 || true)"
+            if [ -z "$APK" ]; then
+              echo "::error::Keine Release-APK gefunden"; exit 1
+            fi
+            : > release.keystore
+            if [ -n "${ANDROID_KEYSTORE_BASE64:-}" ]; then
+              printf "%s" "$ANDROID_KEYSTORE_BASE64" | base64 -d > release.keystore || true
+            fi
+            BT="${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}/build-tools/34.0.0"
+            [ -x "$BT/apksigner" ] || BT="$(ls -d ${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}/build-tools/* | sort -V | tail -n1)"
             "$BT/zipalign" -f -p 4 "$APK" aligned.apk
-            "$BT/apksigner" sign --ks temp.keystore --ks-key-alias androidreleasekey --ks-pass pass:android --key-pass pass:android --out app-release-signed.apk aligned.apk
+            if ! keytool -list -keystore release.keystore -storepass "${ANDROID_KEYSTORE_PASSWORD:-android}" -alias "${ANDROID_KEY_ALIAS:-androidreleasekey}" >/dev/null 2>&1; then
+              echo "::warning::Keystore/Secrets fehlen – temporärer CI-Key"
+              keytool -genkeypair -v -keystore temp.keystore -storepass android -alias androidreleasekey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Temp,O=CI,C=US"
+              "$BT/apksigner" sign --ks temp.keystore --ks-key-alias androidreleasekey --ks-pass pass:android --key-pass pass:android --out app-ci-signed.apk aligned.apk
+            else
+              "$BT/apksigner" sign \
+                --ks release.keystore --ks-key-alias "$ANDROID_KEY_ALIAS" \
+                --ks-pass pass:"$ANDROID_KEYSTORE_PASSWORD" --key-pass pass:"$ANDROID_KEY_PASSWORD" \
+                --out app-ci-signed.apk aligned.apk
+            fi
+            "$BT/apksigner" verify --print-certs app-ci-signed.apk
+            mkdir -p apk_out
+            mv app-ci-signed.apk apk_out/
           else
-            "$BT/zipalign" -f -p 4 "$APK" aligned.apk
-            "$BT/apksigner" sign \
-              --ks release.keystore --ks-key-alias "$ANDROID_KEY_ALIAS" \
-              --ks-pass pass:"$ANDROID_KEYSTORE_PASSWORD" --key-pass pass:"$ANDROID_KEY_PASSWORD" \
-              --out app-release-signed.apk aligned.apk
+            # Debug: bereits signiert – nur bereitstellen
+            APK="$(ls -t android/app/build/outputs/apk/debug/*.apk 2>/dev/null | head -n1 || true)"
+            if [ -z "$APK" ]; then
+              echo "::error::Keine Debug-APK gefunden"; exit 1
+            fi
+            mkdir -p apk_out
+            cp "$APK" apk_out/
           fi
-
-          "$BT/apksigner" verify --print-certs app-release-signed.apk
-          mkdir -p apk_out
-          mv app-release-signed.apk apk_out/
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
