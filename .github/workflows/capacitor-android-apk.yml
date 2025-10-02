@@ -71,30 +71,38 @@ jobs:
       - name: Sync Android
         run: npx cap sync android
 
-      - name: Build Debug APK
+      - name: Build Release APK
         working-directory: android
-        run: ./gradlew :app:assembleDebug
+        run: ./gradlew :app:assembleRelease
 
       - name: List Gradle outputs
         run: |
           echo "=== outputs tree ==="
           ls -R android/app/build/outputs || true
 
-      - name: Collect APKs
+      # --- TEMP SIGNING (Runner-keystore) ---
+      - name: Align & Sign Release APK (temporary keystore)
         shell: bash
         run: |
           set -Eeuo pipefail
-          shopt -s globstar nullglob
-          mkdir -p apk_out
-          files=(android/app/build/outputs/**/*.apk android/app/build/outputs/**/*.aab)
-          if [ ${#files[@]} -eq 0 ]; then
-            echo "Keine APK/AAB gefunden. Baum:"
-            find android/app/build -maxdepth 5 -type f | sed "s#^#  #"
-            exit 1
+          APK="$(ls android/app/build/outputs/apk/release/*.apk | head -n1)"
+          if [ -z "$APK" ]; then
+            echo "Keine Release-APK gefunden"; exit 1
           fi
-          printf "Kopiere %d Datei(en):\n" "${#files[@]}"
-          cp -v "${files[@]}" apk_out/
-          ls -lh apk_out
+          echo "Erzeuge temporären Keystore…"
+          keytool -genkeypair -v -keystore temp-release.keystore -storepass android \
+            -alias androidreleasekey -keypass android -keyalg RSA -keysize 2048 -validity 10000 \
+            -dname "CN=Temp Release,O=CI,C=US"
+          BT="\${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}/build-tools/34.0.0"
+          [ -x "$BT/apksigner" ] || BT="$(ls -d \${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}/build-tools/* | sort -V | tail -n1)"
+          "$BT/zipalign" -f -p 4 "$APK" aligned.apk
+          "$BT/apksigner" sign \
+            --ks temp-release.keystore --ks-key-alias androidreleasekey \
+            --ks-pass pass:android --key-pass pass:android \
+            --out app-release-signed.apk aligned.apk
+          "$BT/apksigner" verify --print-certs app-release-signed.apk
+          mkdir -p apk_out
+          mv app-release-signed.apk apk_out/
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
