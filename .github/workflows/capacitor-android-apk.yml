@@ -61,7 +61,7 @@ jobs:
           APP="$AROOT/app"
           MANIFEST="$APP/src/main/AndroidManifest.xml"
 
-          # 1) Repositories sicherstellen (google + mavenCentral)
+          # 1) Repositories sicherstellen
           for F in "$AROOT/build.gradle" "$AROOT/build.gradle.kts"; do
             [ -f "$F" ] || continue
             if ! grep -q "google()" "$F"; then
@@ -71,9 +71,7 @@ jobs:
             fi
           done
 
-          # 2) AGP & Kotlin Versionen hart auf kompatibel setzen
-          #    AGP 8.4.2 <-> Gradle 8.6, Kotlin 1.9.24
-          # buildscript/classpath (Groovy)
+          # 2) AGP & Kotlin auf kompatibel setzen (AGP 8.4.2, Kotlin 1.9.24)
           if [ -f "$AROOT/build.gradle" ]; then
             if grep -q "com.android.tools.build:gradle" "$AROOT/build.gradle"; then
               sed -i "s/com\.android\.tools\.build:gradle:[^\"]*/com.android.tools.build:gradle:8.4.2/ /build.gradle
@@ -82,14 +80,13 @@ jobs:
               sed -i s/org.jetbrains.kotlin:kotlin-gradle-plugin:[^"]*/org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.24/" "$AROOT/build.gradle"
             fi
           fi
-          # plugins {} (KTS/Groovy)
           for F in "$AROOT/build.gradle" "$AROOT/build.gradle.kts" "$APP/build.gradle" "$APP/build.gradle.kts"; do
             [ -f "$F" ] || continue
             sed -i "s/id[[:space:]]\+["]com.android.application[\"][[:space:]]*version[[:space:]]\+["][0-9.]+[\"]/id com.android.application version 8.4.2/" "$F" || true
             sed -i "s/id[[:space:]]\+["]org.jetbrains.kotlin.android[\"][[:space:]]*version[[:space:]]\+["][0-9.]+[\"]/id org.jetbrains.kotlin.android version 1.9.24/" "$F" || true
           done
 
-          # 3) compile/target SDK = 34
+          # 3) compile/target SDK 34
           for F in "$APP/build.gradle" "$APP/build.gradle.kts"; do
             [ -f "$F" ] || continue
             grep -q "compileSdk" "$F" && sed -i "s/compileSdk.*/compileSdk 34/" "$F" || echo "android { compileSdk 34 }" >> "$F"
@@ -100,7 +97,7 @@ jobs:
             fi
           done
 
-          # 4) namespace (falls fehlt) anhand packageName aus Manifest
+          # 4) namespace (falls fehlt) aus Manifest ableiten
           if [ -f "$MANIFEST" ]; then
             PKG="$(sed -n "s/.*package=\"\\([^\"]*\\)\".*/\\1/p" "$MANIFEST" | head -n1)"
           fi
@@ -112,13 +109,13 @@ jobs:
             fi
           done
 
-          # 5) Gradle properties – Speicher & AndroidX
+          # 5) Gradle properties
           GP="$AROOT/gradle.properties"
           touch "$GP"
           grep -q "org.gradle.jvmargs" "$GP" || echo "org.gradle.jvmargs=-Xmx4g -Dkotlin.daemon.jvm.options=-Xmx2g" >> "$GP"
           grep -q "android.useAndroidX" "$GP" || echo "android.useAndroidX=true" >> "$GP"
 
-          # 6) Monochrome-Icon (falls referenziert, aber fehlt) -> Dummy anlegen
+          # 6) Dummy-Monochrome-Icon, falls referenziert aber fehlt
           MONO_DIR="$APP/src/main/res/mipmap-anydpi-v26"
           MONO_XML="$MONO_DIR/ic_launcher_monochrome.xml"
           if [ -f "$APP/src/main/res/mipmap-anydpi-v26/ic_launcher.xml" ] && [ ! -f "$MONO_XML" ]; then
