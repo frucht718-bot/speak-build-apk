@@ -25,25 +25,31 @@ const Index = () => {
   const [appIcon, setAppIcon] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [recognizedText, setRecognizedText] = useState("");
+  const [logs, setLogs] = useState<string[]>([]);
   const { toast } = useToast();
 
-  const getStepStatus = (stepId: string): "pending" | "processing" | "completed" => {
-    if (currentStep === stepId) return "processing";
-    
-    const steps = ["transcription", "generation", "icon", "complete"];
-    const currentIndex = steps.indexOf(currentStep);
-    const stepIndex = steps.indexOf(stepId);
-    
-    if (currentIndex > stepIndex) return "completed";
-    return "pending";
-  };
+const getStepStatus = (stepId: string): "pending" | "processing" | "completed" => {
+  if (currentStep === stepId) return "processing";
+  
+  const steps = ["transcription", "generation", "icon", "complete"];
+  const currentIndex = steps.indexOf(currentStep);
+  const stepIndex = steps.indexOf(stepId);
+  
+  if (currentIndex > stepIndex) return "completed";
+  return "pending";
+};
 
-  const processingSteps = [
-    { id: "transcription", label: "Sprache wird transkribiert", status: getStepStatus("transcription"), icon: Loader2 },
-    { id: "generation", label: "Code wird generiert", status: getStepStatus("generation"), icon: Code },
-    { id: "icon", label: "App-Icon wird erstellt", status: getStepStatus("icon"), icon: Image },
-    { id: "complete", label: "App ist fertig", status: getStepStatus("complete"), icon: CheckCircle2 },
-  ];
+const addLog = (message: string) => {
+  setLogs((prev) => [...prev, message]);
+};
+
+const processingSteps = [
+  { id: "transcription", label: "Sprache wird transkribiert", status: getStepStatus("transcription"), icon: Loader2 },
+  { id: "generation", label: "Code wird generiert", status: getStepStatus("generation"), icon: Code },
+  { id: "icon", label: "App-Icon wird erstellt", status: getStepStatus("icon"), icon: Image },
+  { id: "complete", label: "App ist fertig", status: getStepStatus("complete"), icon: CheckCircle2 },
+];
 
   const handleRecordingComplete = async (audioBlob: Blob) => {
     setIsProcessing(true);
@@ -62,53 +68,78 @@ const Index = () => {
           throw new Error("Fehler beim Konvertieren der Audio-Datei");
         }
 
-        // Step 1: Voice to Text
-        const { data: transcriptionData, error: transcriptionError } = await supabase.functions.invoke(
-          "voice-to-text",
-          { body: { audio: base64Audio } }
-        );
+        try {
+          addLog("Transkription gestartet");
+          // Step 1: Voice to Text
+          const { data: transcriptionData, error: transcriptionError } = await supabase.functions.invoke(
+            "voice-to-text",
+            { body: { audio: base64Audio } }
+          );
 
-        if (transcriptionError) throw transcriptionError;
+          if (transcriptionError || !transcriptionData?.text) {
+            const errMsg = (transcriptionData as any)?.error || transcriptionError?.message || "Transkription fehlgeschlagen";
+            throw new Error(errMsg);
+          }
 
-        const userPrompt = transcriptionData.text;
-        toast({
-          title: "Spracherkennung erfolgreich",
-          description: `Erkannt: "${userPrompt.substring(0, 50)}..."`,
-        });
+          const userPrompt = transcriptionData.text as string;
+          setRecognizedText(userPrompt);
+          addLog(`Erkannter Text: "${userPrompt.substring(0, 80)}${userPrompt.length > 80 ? '…' : ''}"`);
 
-        // Step 2: Generate Code
-        setCurrentStep("generation");
-        const { data: codeData, error: codeError } = await supabase.functions.invoke(
-          "generate-app-code",
-          { body: { prompt: userPrompt } }
-        );
+          toast({
+            title: "Spracherkennung erfolgreich",
+            description: `Erkannt: "${userPrompt.substring(0, 50)}..."`,
+          });
 
-        if (codeError) throw codeError;
+          // Step 2: Generate Code
+          setCurrentStep("generation");
+          addLog("Starte Code-Generierung");
+          const { data: codeData, error: codeError } = await supabase.functions.invoke(
+            "generate-app-code",
+            { body: { prompt: userPrompt } }
+          );
 
-        setGeneratedCode(codeData.code);
+          if (codeError || !codeData?.code) throw new Error(codeError?.message || "Code-Generierung fehlgeschlagen");
 
-        // Step 3: Generate Icon
-        setCurrentStep("icon");
-        const { data: iconData, error: iconError } = await supabase.functions.invoke(
-          "generate-app-icon",
-          { body: { prompt: userPrompt } }
-        );
+          setGeneratedCode(codeData.code);
+          addLog("Code generiert");
 
-        if (iconError) throw iconError;
+          // Step 3: Generate Icon
+          setCurrentStep("icon");
+          addLog("Erstelle App-Icon");
+          const { data: iconData, error: iconError } = await supabase.functions.invoke(
+            "generate-app-icon",
+            { body: { prompt: userPrompt } }
+          );
 
-        setAppIcon(iconData.icon);
+          if (iconError || !iconData?.icon) throw new Error(iconError?.message || "Icon-Erstellung fehlgeschlagen");
 
-        // Complete
-        setCurrentStep("complete");
-        setTimeout(() => {
-          setStage("preview");
+          setAppIcon(iconData.icon);
+          addLog("App-Icon erstellt");
+
+          // Complete
+          setCurrentStep("complete");
+          addLog("Fertig – Vorschau bereit");
+          setTimeout(() => {
+            setStage("preview");
+            setIsProcessing(false);
+          }, 600);
+
+          toast({
+            title: "App erfolgreich erstellt!",
+            description: "Ihre App ist bereit zur Vorschau",
+          });
+        } catch (err: any) {
+          console.error("Transkriptions-/Generierungsfehler:", err);
+          toast({
+            title: "Fehler",
+            description: err?.message || "Ein Fehler ist aufgetreten",
+            variant: "destructive",
+          });
+          addLog(`Fehler: ${err?.message || 'Unbekannt'}`);
+          setStage("recording");
           setIsProcessing(false);
-        }, 1000);
-
-        toast({
-          title: "App erfolgreich erstellt! 🎉",
-          description: "Ihre App ist bereit zur Vorschau",
-        });
+          setCurrentStep("");
+        }
       };
     } catch (error: any) {
       console.error("Fehler beim Verarbeiten:", error);
@@ -241,16 +272,58 @@ const Index = () => {
               )}
 
               {stage === "processing" && (
-                <div className="py-12">
+                <div className="py-12 space-y-8">
                   <AIProcessingView
                     currentStep={currentStep}
                     steps={processingSteps}
                   />
+
+                  {recognizedText && (
+                    <div className="bg-card/40 backdrop-blur-glass border border-border/50 rounded-xl p-6">
+                      <h4 className="text-sm font-semibold mb-2">Erkannter Text</h4>
+                      <p className="text-sm text-muted-foreground whitespace-pre-wrap">{recognizedText}</p>
+                    </div>
+                  )}
+
+                  {logs.length > 0 && (
+                    <div className="bg-card/40 backdrop-blur-glass border border-border/50 rounded-xl p-6">
+                      <h4 className="text-sm font-semibold mb-2">Schritte</h4>
+                      <ol className="text-sm text-muted-foreground space-y-2">
+                        {logs.map((l, i) => (
+                          <li key={i} className="flex items-start gap-2">
+                            <span className="mt-1 h-2 w-2 rounded-full bg-primary" />
+                            <span>{l}</span>
+                          </li>
+                        ))}
+                      </ol>
+                    </div>
+                  )}
                 </div>
               )}
 
               {(stage === "preview") && (
                 <div className="space-y-8">
+                  {recognizedText && (
+                    <div className="bg-card/40 backdrop-blur-glass border border-border/50 rounded-xl p-6">
+                      <h4 className="text-sm font-semibold mb-2">Erkannter Text</h4>
+                      <p className="text-sm text-muted-foreground whitespace-pre-wrap">{recognizedText}</p>
+                    </div>
+                  )}
+
+                  {logs.length > 0 && (
+                    <div className="bg-card/40 backdrop-blur-glass border border-border/50 rounded-xl p-6">
+                      <h4 className="text-sm font-semibold mb-2">Schritte</h4>
+                      <ol className="text-sm text-muted-foreground space-y-2">
+                        {logs.map((l, i) => (
+                          <li key={i} className="flex items-start gap-2">
+                            <span className="mt-1 h-2 w-2 rounded-full bg-primary" />
+                            <span>{l}</span>
+                          </li>
+                        ))}
+                      </ol>
+                    </div>
+                  )}
+
                   <CodePreview
                     generatedCode={generatedCode}
                     appIcon={appIcon}
