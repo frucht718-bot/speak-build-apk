@@ -1,28 +1,25 @@
-# 🎤 KI App Builder - Voice-to-App Generator
+# 🎤 KI App Builder - Android APK Generator
 
-Eine revolutionäre Web-Anwendung, die es ermöglicht, mobile Apps durch **Sprachbefehle** zu erstellen. Powered by modernster KI-Technologie.
+🎙️ **Spracheingabe** oder **💬 Text-Chat** → 📱 **Android App Code** → 🚀 **APK Download**
+
+Eine revolutionäre Web-Anwendung, die es ermöglicht, mobile Apps durch **Sprachbefehle oder Chat** zu erstellen. Powered by modernster KI-Technologie.
 
 ## ✨ Hauptfunktionen
 
-### 1. 🗣️ Voice-to-App (Klassischer Modus)
-- **Spracherkennung**: Nimm deine App-Idee per Sprache auf
-- **KI-Codegenerierung**: Automatische React Native App-Generierung
-- **App-Icon Generierung**: KI erstellt passendes Icon
-- **Live-Vorschau**: Sofortige Anzeige des generierten Codes
-- **Modifikationen**: Ändere die App per Chat
+### 1. 🗣️ Voice-to-App (Spracheingabe)
+- **Spracherkennung**: Nimm deine App-Idee per Sprache auf (Groq Whisper V3 Turbo)
+- **KI-Codegenerierung**: Automatische React Native App-Generierung (Lovable AI)
+- **App-Icon Generierung**: KI erstellt passendes Icon (Gemini 2.5 Flash Image)
+- **Live-Status**: Siehe Transkription + Fortschritt in Echtzeit
+- **APK-Download**: Vorbereitet für echte APK-Builds mit Capacitor
 
-### 2. 🎙️ Realtime Voice-Chat
-- **WebRTC-basiert**: Direkte Sprachkommunikation mit OpenAI Realtime API
-- **Bidirektional**: Sprechen und Hören in Echtzeit
-- **OpenAI GPT-4o Realtime**: Modernste Sprachverarbeitung
-- **Live-Transkription**: Sehe das Gespräch in Textform
-
-### 3. 💬 KI Text-Chat
+### 2. 💬 KI Text-Chat
 - **Multi-Provider**: Wähle zwischen Gemini, Groq und OpenAI
-- **Gemini 2.5 Flash**: Google's neuestes Modell (Standard)
-- **Groq Mixtral**: Blitzschnelle Inferenz
+- **Gemini 2.5 Flash**: Google's neuestes Modell (Standard, KOSTENLOS)
+- **Groq Modelle**: Llama 3.3 70B, Mixtral 8x7B, Llama 3.1 8B (blitzschnell)
 - **OpenAI GPT-4o**: Premium-Qualität
 - **Vollständige Chat-History**: Alle Nachrichten gespeichert
+- **Fest integriert**: KI weiß, dass es um Android APK-Bau geht
 
 ## 🎨 Design Highlights
 
@@ -49,27 +46,35 @@ Eine revolutionäre Web-Anwendung, die es ermöglicht, mobile Apps durch **Sprac
 - **Tailwind CSS**: Utility-First CSS Framework
 - **shadcn/ui**: Hochwertige UI-Komponenten
 - **Lucide Icons**: Moderne Icon-Bibliothek
+- **Capacitor**: Native Mobile Support (Android/iOS)
 
 ### Backend (Lovable Cloud)
-- **Supabase**: PostgreSQL Datenbank
-- **Edge Functions**: Serverless Backend-Logik
+- **Supabase**: Edge Functions & Secrets Management
 - **Deno Runtime**: Sicheres JavaScript/TypeScript Runtime
-- **Secrets Management**: Sichere API-Key-Verwaltung
+- **Lovable AI Gateway**: Zugriff auf Gemini & GPT-5
 
 ### KI & APIs
-- **OpenAI Realtime API**: Voice-to-Voice Kommunikation
-- **OpenAI GPT-4o**: Text & Voice Modelle
-- **Lovable AI Gateway**: Zugriff auf Gemini & GPT-5
-- **Groq API**: Ultra-schnelle LLM Inferenz
+- **Lovable AI**: Code/Icon-Generierung (Gemini 2.5 Flash, Gemini 2.5 Flash Image)
+- **Groq API**: Whisper V3 Turbo (STT), Llama 3.3, Mixtral 8x7B
+- **OpenAI**: GPT-4o (Fallback für STT & Chat)
 
-## 📦 Dependencies
+## 📦 Verfügbare KI-Modelle
 
-Alle erforderlichen Abhängigkeiten sind bereits installiert:
-- React, React-DOM, React-Router
-- Supabase JS Client
-- Radix UI Komponenten
-- Tailwind CSS mit Animationen
-- TypeScript & Vite
+### Speech-to-Text (STT)
+- **Groq Whisper V3 Turbo** (Primary, Deutsch)
+- **OpenAI Whisper-1** (Fallback)
+
+### Text-Chat
+- **Gemini 2.5 Flash** (Standard, KOSTENLOS Sept 29 - Okt 6, 2025)
+- **Groq Llama 3.3 70B Versatile** (Groq)
+- **Groq Mixtral 8x7B (32k)** (Groq)
+- **Groq Llama 3.1 8B Instant** (Groq, schnellstes)
+- **Groq Gemma 2 9B IT** (Groq)
+- **OpenAI GPT-4o** (Premium)
+
+### Code/Icon-Generierung
+- **Lovable AI**: google/gemini-2.5-flash (Code)
+- **Lovable AI**: google/gemini-2.5-flash-image-preview (Icon)
 
 ## 🚀 Projekt-Struktur
 
@@ -78,39 +83,35 @@ speak-build-apk/
 ├── src/
 │   ├── components/
 │   │   ├── VoiceRecorder.tsx          # Sprach-Aufnahme mit Visualizer
-│   │   ├── AIProcessingView.tsx       # Verarbeitungs-Schritte
-│   │   ├── CodePreview.tsx            # Code & APK Download
-│   │   ├── ChatInterface.tsx          # App-Modifikations-Chat
-│   │   ├── RealtimeVoiceChat.tsx      # WebRTC Voice-Chat
 │   │   ├── TextChatInterface.tsx      # Multi-Provider Text-Chat
-│   │   ├── ParticleBackground.tsx     # Animierter Hintergrund
-│   │   ├── LoadingSpinner.tsx         # Loading-Komponente
-│   │   ├── FeatureCard.tsx            # Feature-Display
-│   │   ├── StatusBadge.tsx            # Status-Anzeigen
-│   │   ├── ErrorBoundary.tsx          # Fehler-Behandlung
+│   │   ├── AIProcessingView.tsx       # Verarbeitungs-Schritte
+│   │   ├── CodePreview.tsx            # Vorschau & APK-Download
+│   │   ├── ParticleBackground.tsx     # Animierter Hintergrund (optional)
 │   │   └── ui/                        # shadcn/ui Komponenten
 │   ├── hooks/
 │   │   ├── use-toast.ts               # Toast Notifications
 │   │   └── useAudioVisualization.ts   # Audio Frequenz-Analyse
 │   ├── pages/
 │   │   └── Index.tsx                  # Haupt-Page mit Tabs
-│   ├── integrations/
-│   │   └── supabase/
-│   │       ├── client.ts              # Supabase Client
-│   │       └── types.ts               # TypeScript Typen
-│   ├── index.css                      # Globale Styles & Design System
-│   ├── App.tsx                        # App Root mit Error Boundary
+│   ├── integrations/supabase/
+│   │   ├── client.ts                  # Supabase Client
+│   │   └── types.ts                   # TypeScript Typen (auto-generated)
 │   └── main.tsx                       # Entry Point
 ├── supabase/
 │   ├── functions/
-│   │   ├── voice-to-text/             # Whisper Speech-to-Text
-│   │   ├── generate-app-code/         # Code-Generierung
+│   │   ├── voice-to-text/             # Groq Whisper V3 Turbo STT
+│   │   ├── chat-with-ai/              # Multi-Provider Chat (Gemini/Groq/OpenAI)
+│   │   ├── generate-app-code/         # Code-Generierung (Lovable AI)
+│   │   ├── generate-app-icon/         # Icon-Generierung (Lovable AI)
 │   │   ├── modify-app-code/           # Code-Modifikation
-│   │   ├── generate-app-icon/         # Icon-Generierung
-│   │   ├── realtime-voice/            # OpenAI Realtime Session
-│   │   ├── chat-with-ai/              # Multi-Provider Chat
-│   │   └── build-apk/                 # APK Build (Placeholder)
+│   │   └── build-apk/                 # APK Build (Vorbereitung)
 │   └── config.toml                    # Supabase Config
+├── .github/workflows/
+│   ├── test-build.yml                 # CI Build Test
+│   └── capacitor-android-apk.yml      # APK Build Workflow
+├── android/                           # Native Android Project (nach `npx cap add android`)
+├── capacitor.config.ts                # Capacitor Konfiguration
+├── DEPLOYMENT.md                      # Detaillierte Deployment-Anleitung
 ├── tailwind.config.ts                 # Tailwind Konfiguration
 ├── vite.config.ts                     # Vite Build Config
 └── package.json                       # Dependencies
@@ -120,32 +121,26 @@ speak-build-apk/
 
 Die folgenden Secrets sind in Lovable Cloud konfiguriert:
 
-- ✅ `OPENAI_API_KEY` - Für Realtime API & GPT-4o
-- ✅ `GROQ_API_KEY` - Für Groq Mixtral Modelle
-- ✅ `LOVABLE_API_KEY` - Automatisch bereitgestellt für Gemini/GPT-5
+- ✅ `GROQ_API_KEY` - Für Groq Whisper STT & Llama/Mixtral Chat
+- ✅ `OPENAI_API_KEY` - Fallback für STT & GPT-4o Chat (optional)
+- ✅ `LOVABLE_API_KEY` - Automatisch bereitgestellt für Gemini Code/Icon-Generierung
 
-## 🎯 Features im Detail
+## 🎯 Workflow im Detail
 
 ### Voice-to-App Pipeline
-1. **Aufnahme**: Hochwertige Audio-Aufnahme mit Noise-Suppression
-2. **Transkription**: OpenAI Whisper für präzise Speech-to-Text
-3. **Code-Generierung**: KI generiert vollständigen React Native Code
-4. **Icon-Generierung**: Passende App-Icons per DALL-E
-5. **Modifikation**: Weitere Anpassungen per Chat möglich
+1. **Aufnahme**: Hochwertige Audio-Aufnahme mit Live-Visualizer
+2. **Transkription**: Groq Whisper V3 Turbo für präzise Speech-to-Text (Deutsch)
+3. **Code-Generierung**: Lovable AI generiert vollständigen React Native Code
+4. **Icon-Generierung**: Gemini 2.5 Flash Image erstellt App-Icon
+5. **Status-Anzeige**: Erkannter Text + Schritte werden live angezeigt
+6. **APK-Vorbereitung**: Capacitor-Config für echten APK-Build
 
-### Realtime Voice-Chat
-1. **Session erstellen**: Edge Function holt ephemeral Token
-2. **WebRTC Setup**: Peer Connection mit OpenAI
-3. **Bidirektionale Audio**: Gleichzeitiges Senden & Empfangen
-4. **Live-Events**: Real-time Transkriptionen und Status
-5. **Auto-Stop**: Intelligente Sprach-Pause-Erkennung
-
-### Multi-Provider Chat
+### Text-Chat Pipeline
 1. **Provider-Auswahl**: Dropdown für Gemini/Groq/OpenAI
-2. **Conversation History**: Vollständiger Kontext wird gesendet
-3. **Error Handling**: Robuste Fehlerbehandlung für alle APIs
-4. **Model-Info**: Anzeige des aktiven Modells
-5. **Streaming**: (Kann erweitert werden)
+2. **Model-Auswahl**: Bei Groq: Llama 3.3, Mixtral, etc.
+3. **Conversation History**: Vollständiger Kontext wird gesendet
+4. **Fest integriert**: System-Prompt: "Du bist Android APK Builder"
+5. **Error Handling**: Robuste Fehlerbehandlung (429/402 Rate-Limits)
 
 ## 🎨 Design System
 
@@ -164,53 +159,76 @@ Die folgenden Secrets sind in Lovable Cloud konfiguriert:
 - `animate-gradient` - Animierter Gradient
 - `animate-glow-rotate` - Rotierender Glow
 
-## 🚀 Deployment
+## 🚀 Deployment & APK Build
 
-### Lovable Cloud (Automatisch)
-Das Projekt wird automatisch auf Lovable Cloud deployed:
-- **Live-Vorschau**: Sofortige Updates bei Code-Änderungen
-- **Edge Functions**: Automatisch deployed
-- **Environment Variables**: Sicher in Cloud gespeichert
+### Web-App (Automatisch via Lovable)
+- **Live-URL**: https://3198181e-976d-4dad-989f-284fb4a95d0a.lovableproject.com
+- **Automatisch deployed**: Bei jedem Push zu Lovable
+- **Edge Functions**: Automatisch deployed via Lovable Cloud
 
-### Manuelles lokales Setup
+### Android APK erstellen
+
+**📄 Siehe [DEPLOYMENT.md](./DEPLOYMENT.md) für detaillierte Anleitung!**
+
+**Schnellstart**:
 ```bash
-# Repository klonen
-git clone <YOUR_GIT_URL>
+# 1. GitHub-Repo verbinden (über Lovable)
+# 2. Projekt klonen
+git clone https://github.com/YOUR_USERNAME/speak-build-apk.git
 cd speak-build-apk
 
-# Dependencies installieren
+# 3. Dependencies
 npm install
 
-# Development Server starten
-npm run dev
-
-# Production Build
-npm run build
-```
-
-## 📱 Mobile App (Capacitor)
-
-Das Projekt ist vorbereitet für native mobile Apps mit Capacitor:
-
-```bash
-# Capacitor Dependencies (falls nicht installiert)
-npm i @capacitor/core @capacitor/cli @capacitor/android @capacitor/ios
-
-# Initialisieren
-npx cap init
-
-# Platform hinzufügen
+# 4. Capacitor Android hinzufügen
 npx cap add android
-npx cap add ios
 
-# Build & Sync
-npm run build
-npx cap sync
+# 5. Build + Sync
+npm run build && npx cap sync
 
-# Auf Gerät starten
-npx cap run android
-npx cap run ios
+# 6. Android Studio öffnen & APK bauen
+npx cap open android
+# In Android Studio: Build → Build Bundle(s) / APK(s) → Build APK(s)
 ```
+
+**Alternative: Cloud Build mit Expo EAS**
+```bash
+npm install -g eas-cli
+eas login
+eas build:configure
+eas build --platform android --profile preview
+```
+
+**Alternative: GitHub Actions**
+- Siehe `.github/workflows/capacitor-android-apk.yml`
+- Push mit Tag `v*` triggert automatischen APK-Build
+
+## 📱 Capacitor Mobile Integration
+
+Das Projekt ist vollständig mit Capacitor konfiguriert:
+
+**Capacitor Config**:
+- App ID: `app.lovable.3198181e976d4dad989f284fb4a95d0a`
+- App Name: `speak-build-apk`
+- Server URL: Hot-Reload via Lovable Sandbox
+- Platforms: Android + iOS Support
+
+**Commands**:
+```bash
+# Platform hinzufügen
+npx cap add android  # oder ios
+
+# Nach Code-Änderungen
+npm run build && npx cap sync
+
+# Native IDE öffnen
+npx cap open android  # oder ios
+
+# Auf Gerät/Emulator starten
+npx cap run android  # oder ios
+```
+
+**Hinweis**: iOS-Build erfordert macOS + Xcode.
 
 ## 🐛 Debugging & Troubleshooting
 

@@ -20,7 +20,7 @@ export const TextChatInterface = () => {
   const [input, setInput] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [provider, setProvider] = useState<"gemini" | "groq" | "openai">("gemini");
-  const [model, setModel] = useState<string>("mixtral-8x7b-32768");
+  const [model, setModel] = useState<string>("llama-3.3-70b-versatile");
   const scrollRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -156,11 +156,11 @@ export const TextChatInterface = () => {
                     <SelectValue placeholder="Groq-Modell" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="llama-3.3-70b-versatile">Llama 3.3 70B Versatile</SelectItem>
+                    <SelectItem value="llama-3.1-70b-versatile">Llama 3.1 70B Versatile</SelectItem>
+                    <SelectItem value="llama-3.1-8b-instant">Llama 3.1 8B Instant</SelectItem>
                     <SelectItem value="mixtral-8x7b-32768">Mixtral 8x7B (32k)</SelectItem>
-                    <SelectItem value="llama3-70b-8192">Llama 3 70B (8k)</SelectItem>
-                    <SelectItem value="llama3-8b-8192">Llama 3 8B (8k)</SelectItem>
                     <SelectItem value="gemma2-9b-it">Gemma 2 9B (IT)</SelectItem>
-                    <SelectItem value="qwen2-72b-instruct">Qwen2 72B Instruct</SelectItem>
                   </SelectContent>
                 </Select>
               )}

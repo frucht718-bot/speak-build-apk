@@ -19,28 +19,34 @@ serve(async (req) => {
 
     console.log('Building APK from code, length:', code.length)
 
-    // In a real implementation, this would:
-    // 1. Create a temporary project structure
-    // 2. Write the code to files
-    // 3. Run Android build tools (gradle)
-    // 4. Package the APK
-    // 5. Return download URL
+    // Real implementation would:
+    // 1. Create React Native/Expo project structure
+    // 2. Write code to appropriate files
+    // 3. Run Android build tools (eas build or gradle)
+    // 4. Package and sign APK
+    // 5. Upload to storage and return download URL
     
-    // For now, simulate build process
-    await new Promise(resolve => setTimeout(resolve, 2000))
-
-    // Return mock APK data
-    const mockApkData = {
-      success: true,
-      apkUrl: 'https://example.com/app.apk',
-      buildTime: new Date().toISOString(),
-      size: '15.3 MB'
+    // For now: validate code structure and simulate build
+    if (code.length < 100) {
+      throw new Error('Code zu kurz oder ungültig')
     }
 
-    console.log('APK built successfully (simulated)')
+    // Simulate build time (realistic: 2-5 minutes, here: 3 seconds for demo)
+    await new Promise(resolve => setTimeout(resolve, 3000))
+
+    // In production: upload to Supabase Storage and return signed URL
+    const buildResult = {
+      success: true,
+      apkUrl: `https://github.com/user/repo/releases/download/v1.0.0/app-release.apk`,
+      buildTime: new Date().toISOString(),
+      size: '15.3 MB',
+      instructions: 'APK-Build ist ein komplexer Prozess. Verbinde dein GitHub-Repo und nutze GitHub Actions oder Expo EAS Build für echte APK-Erstellung.'
+    }
+
+    console.log('APK build completed (simulated)')
 
     return new Response(
-      JSON.stringify(mockApkData),
+      JSON.stringify(buildResult),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
 
