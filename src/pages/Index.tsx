@@ -194,24 +194,16 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background relative overflow-hidden">
-      {/* Particle Background */}
-      <ParticleBackground />
-      
-      {/* Animated background gradients */}
-      <div className="fixed inset-0 -z-10">
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/30 rounded-full blur-[120px] animate-float" />
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-cyber-cyan/20 rounded-full blur-[120px] animate-float" style={{ animationDelay: "1s" }} />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-primary opacity-10 rounded-full blur-[150px] animate-glow-rotate" />
-      </div>
+      {/* Minimal layout - Background visuals removed as requested */}
 
       <div className="container mx-auto px-4 py-12">
         {/* Minimaler Header */}
-        <div className="text-center mb-10">
-          <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-primary via-cyber-cyan to-primary bg-clip-text text-transparent animate-gradient">
+        <div className="text-center mb-6">
+          <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary via-cyber-cyan to-primary bg-clip-text text-transparent">
             KI App Builder
           </h1>
-          <p className="mt-3 text-sm md:text-base text-muted-foreground">
-            Android APK Builder – nur Smartphone-Apps. Kein Code, nur klare Schritte.
+          <p className="mt-2 text-xs md:text-sm text-muted-foreground">
+            Android-APKs per Spracheingabe oder Chat • Kein Code sichtbar
           </p>
         </div>
 

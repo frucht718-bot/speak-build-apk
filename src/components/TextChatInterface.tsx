@@ -45,15 +45,17 @@ export const TextChatInterface = () => {
     setIsProcessing(true);
 
     try {
+      const payload: any = {
+        messages: [...messages, userMessage].map(m => ({
+          role: m.role,
+          content: m.content
+        })),
+        provider,
+      };
+      if (provider === 'groq') payload.model = model;
+
       const { data, error } = await supabase.functions.invoke("chat-with-ai", {
-        body: {
-          messages: [...messages, userMessage].map(m => ({
-            role: m.role,
-            content: m.content
-          })),
-          provider,
-          model,
-        },
+        body: payload,
       });
 
       if (error) throw error;

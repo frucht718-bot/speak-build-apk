@@ -7,32 +7,32 @@ const corsHeaders = {
 }
 
 function processBase64Chunks(base64String: string, chunkSize = 32768) {
-  const chunks: Uint8Array[] = [];
-  let position = 0;
-  
+  const chunks: Uint8Array[] = []
+  let position = 0
+
   while (position < base64String.length) {
-    const chunk = base64String.slice(position, position + chunkSize);
-    const binaryChunk = atob(chunk);
-    const bytes = new Uint8Array(binaryChunk.length);
-    
+    const chunk = base64String.slice(position, position + chunkSize)
+    const binaryChunk = atob(chunk)
+    const bytes = new Uint8Array(binaryChunk.length)
+
     for (let i = 0; i < binaryChunk.length; i++) {
-      bytes[i] = binaryChunk.charCodeAt(i);
+      bytes[i] = binaryChunk.charCodeAt(i)
     }
-    
-    chunks.push(bytes);
-    position += chunkSize;
+
+    chunks.push(bytes)
+    position += chunkSize
   }
 
-  const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
-  const result = new Uint8Array(totalLength);
-  let offset = 0;
+  const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0)
+  const result = new Uint8Array(totalLength)
+  let offset = 0
 
   for (const chunk of chunks) {
-    result.set(chunk, offset);
-    offset += chunk.length;
+    result.set(chunk, offset)
+    offset += chunk.length
   }
 
-  return result;
+  return result
 }
 
 serve(async (req) => {
@@ -42,43 +42,82 @@ serve(async (req) => {
 
   try {
     const { audio } = await req.json()
-    
+
     if (!audio) {
       throw new Error('No audio data provided')
     }
 
-    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY')
-    if (!OPENAI_API_KEY) {
-      throw new Error('OPENAI_API_KEY not configured')
-    }
-
     const binaryAudio = processBase64Chunks(audio)
-    
-    const formData = new FormData()
     const blob = new Blob([binaryAudio], { type: 'audio/webm' })
-    formData.append('file', blob, 'audio.webm')
-    formData.append('model', 'whisper-1')
-    formData.append('language', 'de')
 
-    const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
-      },
-      body: formData,
-    })
+    // Prefer GROQ Whisper for STT to avoid OpenAI quota issues
+    const GROQ_API_KEY = Deno.env.get('GROQ_API_KEY')
+    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY')
 
-    if (!response.ok) {
-      throw new Error(`OpenAI API error: ${await response.text()}`)
+    async function transcribeWithGroq() {
+      if (!GROQ_API_KEY) throw new Error('GROQ_API_KEY not configured')
+      const formData = new FormData()
+      formData.append('file', blob, 'audio.webm')
+      formData.append('model', 'whisper-large-v3')
+      formData.append('language', 'de')
+
+      const resp = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${GROQ_API_KEY}` },
+        body: formData,
+      })
+
+      if (!resp.ok) {
+        const t = await resp.text()
+        console.error('GROQ STT error:', resp.status, t)
+        if (resp.status === 429) throw new Error('GROQ Rate limit exceeded. Please try again later.')
+        if (resp.status === 402) throw new Error('GROQ payment required. Please add credits.')
+        throw new Error(`Groq STT failed: ${resp.status}`)
+      }
+
+      const data = await resp.json()
+      return data.text as string
     }
 
-    const result = await response.json()
+    async function transcribeWithOpenAI() {
+      if (!OPENAI_API_KEY) throw new Error('OPENAI_API_KEY not configured')
+      const formData = new FormData()
+      formData.append('file', blob, 'audio.webm')
+      formData.append('model', 'whisper-1')
+      formData.append('language', 'de')
+
+      const resp = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${OPENAI_API_KEY}` },
+        body: formData,
+      })
+
+      if (!resp.ok) {
+        const t = await resp.text()
+        console.error('OpenAI STT error:', resp.status, t)
+        throw new Error(`OpenAI STT failed: ${resp.status}`)
+      }
+
+      const data = await resp.json()
+      return data.text as string
+    }
+
+    let text = ''
+    try {
+      text = await transcribeWithGroq()
+    } catch (groqErr) {
+      console.warn('Falling back to OpenAI STT due to GROQ error:', groqErr)
+      if (OPENAI_API_KEY) {
+        text = await transcribeWithOpenAI()
+      } else {
+        throw groqErr
+      }
+    }
 
     return new Response(
-      JSON.stringify({ text: result.text }),
+      JSON.stringify({ text }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
-
   } catch (error) {
     console.error('Error in voice-to-text:', error)
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
