@@ -19,8 +19,7 @@ export const TextChatInterface = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
-  const [provider, setProvider] = useState<"gemini" | "groq" | "openai">("gemini");
-  const [model, setModel] = useState<string>("llama-3.3-70b-versatile");
+  const [model, setModel] = useState<string>("google/gemini-2.5-flash");
   const scrollRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -45,17 +44,14 @@ export const TextChatInterface = () => {
     setIsProcessing(true);
 
     try {
-      const payload: any = {
-        messages: [...messages, userMessage].map(m => ({
-          role: m.role,
-          content: m.content
-        })),
-        provider,
-      };
-      if (provider === 'groq') payload.model = model;
-
       const { data, error } = await supabase.functions.invoke("chat-with-ai", {
-        body: payload,
+        body: {
+          messages: [...messages, userMessage].map(m => ({
+            role: m.role,
+            content: m.content
+          })),
+          model,
+        },
       });
 
       if (error) throw error;
@@ -71,7 +67,7 @@ export const TextChatInterface = () => {
 
       toast({
         title: "Antwort erhalten",
-        description: `Von ${provider.toUpperCase()}`,
+        description: `Lovable AI (${model})`,
       });
     } catch (error: any) {
       console.error("Fehler beim Chat:", error);
@@ -92,12 +88,12 @@ export const TextChatInterface = () => {
     }
   };
 
-  const getProviderLabel = (p: string) => {
-    switch (p) {
-      case "gemini": return "Gemini 2.5 Flash";
-      case "groq": return "Groq Mixtral";
-      case "openai": return "OpenAI GPT-4o";
-      default: return p;
+  const getModelLabel = (m: string) => {
+    switch (m) {
+      case "google/gemini-2.5-flash": return "Gemini 2.5 Flash (KOSTENLOS)";
+      case "google/gemini-2.5-pro": return "Gemini 2.5 Pro";
+      case "google/gemini-2.5-flash-lite": return "Gemini 2.5 Flash Lite";
+      default: return m;
     }
   };
 
@@ -115,55 +111,40 @@ export const TextChatInterface = () => {
                   <Bot className="h-5 w-5 text-primary-foreground" />
                 </div>
                 <h3 className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-                  KI Text-Chat
+                  KI Text-Chat (Lovable AI)
                 </h3>
               </div>
               <p className="text-sm text-muted-foreground mt-2">
-                Fest integriert: Android APK Builder. Keine Codeausgabe – nur klare Schritte.
+                Powered by Gemini 2.5 • KOSTENLOS bis 6. Okt 2025
               </p>
             </div>
             
             <div className="flex items-center gap-3">
-              <Select value={provider} onValueChange={(v: any) => setProvider(v)}>
-                <SelectTrigger className="w-[200px] bg-background/50 border-border/50">
+              <Select value={model} onValueChange={(v: any) => setModel(v)}>
+                <SelectTrigger className="w-[280px] bg-background/50 border-border/50">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="gemini">
+                  <SelectItem value="google/gemini-2.5-flash">
                     <div className="flex items-center gap-2">
                       <Sparkles className="h-4 w-4 text-primary" />
-                      Gemini 2.5 Flash
+                      Gemini 2.5 Flash (KOSTENLOS)
                     </div>
                   </SelectItem>
-                  <SelectItem value="groq">
+                  <SelectItem value="google/gemini-2.5-pro">
                     <div className="flex items-center gap-2">
-                      <Sparkles className="h-4 w-4 text-cyber-cyan" />
-                      Groq (Modelle wählbar)
+                      <Sparkles className="h-4 w-4 text-purple-500" />
+                      Gemini 2.5 Pro (Premium)
                     </div>
                   </SelectItem>
-                  <SelectItem value="openai">
+                  <SelectItem value="google/gemini-2.5-flash-lite">
                     <div className="flex items-center gap-2">
                       <Sparkles className="h-4 w-4 text-green-500" />
-                      OpenAI GPT-4o
+                      Gemini 2.5 Flash Lite (Schnell)
                     </div>
                   </SelectItem>
                 </SelectContent>
               </Select>
-
-              {provider === 'groq' && (
-                <Select value={model} onValueChange={(v: any) => setModel(v)}>
-                  <SelectTrigger className="w-[230px] bg-background/50 border-border/50">
-                    <SelectValue placeholder="Groq-Modell" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="llama-3.3-70b-versatile">Llama 3.3 70B Versatile</SelectItem>
-                    <SelectItem value="llama-3.1-70b-versatile">Llama 3.1 70B Versatile</SelectItem>
-                    <SelectItem value="llama-3.1-8b-instant">Llama 3.1 8B Instant</SelectItem>
-                    <SelectItem value="mixtral-8x7b-32768">Mixtral 8x7B (32k)</SelectItem>
-                    <SelectItem value="gemma2-9b-it">Gemma 2 9B (IT)</SelectItem>
-                  </SelectContent>
-                </Select>
-              )}
             </div>
           </div>
 
@@ -178,7 +159,7 @@ export const TextChatInterface = () => {
                   <p className="text-lg font-semibold">Noch keine Nachrichten</p>
                   <p className="text-sm mt-2">Starte eine Unterhaltung mit der KI</p>
                   <p className="text-xs mt-4 text-muted-foreground">
-                    Aktuelles Modell: {getProviderLabel(provider)}
+                    {getModelLabel(model)}
                   </p>
                 </div>
               ) : (
@@ -255,7 +236,7 @@ export const TextChatInterface = () => {
               </Button>
             </div>
             <p className="text-xs text-muted-foreground mt-3 text-center">
-              Drücke Enter zum Senden • {getProviderLabel(provider)} aktiv{provider === 'groq' ? ` • Modell: ${model}` : ''}
+              Drücke Enter zum Senden • {getModelLabel(model)}
             </p>
           </div>
         </div>
